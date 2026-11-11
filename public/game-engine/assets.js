@@ -113,7 +113,7 @@ const LPC_ARMOR = {
   // rune: purple chain jacket base + violet tint + a soft warding glow so it
   // shimmers like the icon (icon desc: "shimmer on hit").
   rune_armor:    { torso:'TORSO_plate_armor_torso.png', arms:'TORSO_plate_armor_arms_shoulders.png', legs:'LEGS_plate_armor_pants.png', feet:'FEET_plate_armor_shoes.png', tint:'#5a2fb0', tintA:0.34, glow:'#8a3dff' },
-  // Punch list #9 (MiniPay compliance) — the bare LPC BODY_male sheet is the
+  // Punch list #9 — the bare LPC BODY_male sheet is the
   // stock LPC "skin" layer with no clothing baked in (underwear only), so
   // any player with no marketplace armor equipped — which is every player
   // at run start, and anyone who hasn't bought armor yet — rendered

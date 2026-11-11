@@ -75,6 +75,23 @@ The game runs on stablecoins + an in-game point — **no speculative token**. Th
 | **Wallet support** | Injected wallets only — OKX Wallet and MetaMask browser extension. WalletConnect/Coinbase Wallet/Rainbow are not integrated (WalletConnect relay was removed; see `docs/network-manifest.md`). |
 | **Verification** | `POST /api/marketplace/verify` validates on-chain transfer, prevents replay, records ownership |
 
+### TapeOut integration (read-only on-chain data)
+
+The game reads **live TapeOut state from X Layer mainnet** (chain `196`) and shows it in the
+world-map hub and on the Sealed Vault door — no wallet, no transaction, no cost:
+
+- **What is read, live** (`GET /api/tapeout`, code in `lib/tapeout.ts`, hook in `hooks/useTapeOut.ts`):
+  the factory's processor count (`cpuCount()`), the Genesis CPU X processor (`cpuAt(101)` +
+  `name()`), and the owner of reference circuit TapeID `3.2.101` (`ownerOf(3)`). Every number
+  on screen comes from an `eth_call` to the public X Layer RPC (`https://rpc.xlayer.tech`) —
+  nothing is hardcoded.
+- **What this satisfies**: the OKX X Layer TapeOut Accelerate rule that a project "use TapeOut
+  circuits, contracts **or onchain data** on X Layer". This integration is the on-chain-data
+  half of that clause.
+- **What it is not**: this is not a DeWEB deployment and the game does not claim "100% on-chain".
+  DeWEB (a site served from an on-chain container) is a separate step that needs mainnet funds
+  and is **postponed** until funding is available.
+
 ---
 
 ## Getting Started

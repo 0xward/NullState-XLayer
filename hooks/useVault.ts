@@ -21,7 +21,7 @@ export function useVault(walletAddress: string | undefined) {
   // rather than around it (lib/walletBridge.tsx), so this hook is not inside
   // WagmiProvider and calling usePublicClient()/useWalletClient() here throws
   // WagmiProviderNotFoundError — which is exactly what it did: opening Rewards
-  // in MiniPay died with "a client-side exception has occurred". Both are null
+  // died with "a client-side exception has occurred". Both are null
   // until wagmi has loaded, and every path below already guards on that.
   const { publicClient } = useWallet()
 

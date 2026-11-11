@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
  *
  * The browser reports Core Web Vitals to PostHog (lib/webVitals.ts). This route
  * asks PostHog for the p75 of those samples so /stats can show what actual
- * players experience, which is the number MiniPay's listing review grades — not
+ * players experience, which is the number that matters for real users — not
  * a PageSpeed run on a fast machine.
  *
  * WHY p75 AND NOT AN AVERAGE

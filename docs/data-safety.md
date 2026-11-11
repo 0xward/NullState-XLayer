@@ -24,8 +24,8 @@ One of NullState's core promises:
 
 ### On-Chain (Immutable)
 
-Celo blockchain stores:
-- Stablecoin transfers (Vault Quest + Season Bonus rewards paid in USDT; Marketplace/Pass purchases in USDM/USDC/USDT — burns produce NullState Point off-chain instead, see rewards-system.md)
+X Layer stores:
+- Stablecoin transfers (Vault Quest + Season Bonus rewards paid in USDT; Marketplace/Pass purchases in USDC/USDT0 — burns produce NullState Point off-chain instead, see rewards-system.md)
 - Vault code submissions (proof of completions)
 - Leaderboard snapshots (top 3 finalized)
 - Pass NFTs (your season pass certificates)
@@ -70,7 +70,7 @@ Our secure database stores:
 
 - **Private key** = Your responsibility
 - **Seed phrase** = Write it down, keep safe
-- **Wallet** = Use MiniPay or MetaMask (WalletConnect/Rainbow/Coinbase Wallet not integrated)
+- **Wallet** = Use an injected wallet (e.g. MetaMask)
 - **Transactions** = You sign every one
 
 ### Best Practices
@@ -122,17 +122,17 @@ Your data flows:
 
 ### Smart Contracts
 
-All contracts are **open-source & verifiable** on Celoscan:
+All contracts are **open-source & verifiable** on the X Layer explorer:
 
-- **PassSBT**: [View on Celoscan](https://celoscan.io)
-- **NullStateReward**: [View on Celoscan](https://celoscan.io)
-- **TreasureVault**: [View on Celoscan](https://celoscan.io)
+- **PassSBT**: [View on the X Layer explorer](https://www.okx.com/web3/explorer/xlayer)
+- **NullStateReward**: [View on the X Layer explorer](https://www.okx.com/web3/explorer/xlayer)
+- **TreasureVault**: [View on the X Layer explorer](https://www.okx.com/web3/explorer/xlayer)
 
 You can audit the code yourself!
 
 ### Transactions
 
-Every USDM transfer is visible:
+Every USDC transfer is visible:
 - Burn rewards: Transparent on-chain
 - Season bonuses: Locked in contract
 - Vault claims: Logged as events
@@ -142,16 +142,16 @@ Every USDM transfer is visible:
 ## ❓ FAQ
 
 **Q: What if the server goes down?**  
-A: Your on-chain data (USDM, passes, vault claims) is safe forever. Off-chain inventory can be restored from backups within hours.
+A: Your on-chain data (USDC, passes, vault claims) is safe forever. Off-chain inventory can be restored from backups within hours.
 
 **Q: Can NullState devs steal my items?**  
 A: No. Only you control your wallet. Devs can't access private keys or move funds without you signing.
 
-**Q: Is my USDM safe?**  
+**Q: Is my USDC safe?**  
 A: Yes. It's in a smart contract you control. Only you can claim/transfer it.
 
 **Q: What if I lose my wallet?**  
-A: Your on-chain assets (USDM, passes) are retrievable with seed phrase. Off-chain inventory may be recoverable by support.
+A: Your on-chain assets (USDC, passes) are retrievable with seed phrase. Off-chain inventory may be recoverable by support.
 
 **Q: How long is data kept?**  
 A: Forever. NullState promises permanent data persistence.
@@ -166,12 +166,13 @@ A: Blockchain data is always public. Game data can be exported on request.
 *To be added post-deployment*
 
 ```
-Celo Mainnet (Chain ID 42220)
+X Layer (Chain ID 196)
 
 PassSBT: 0x...
 NullStateReward: 0x...
 TreasureVault: 0x...
-USDM Token: 0x765DE816845861e75A25fCA122bb6898B8B1282a
+USDC: 0xB6CEceAB302E2E4948951eE7843FC24E92933061
+USDT0: 0x779Ded0c9e1022225f8E0630b35a9b54bE713736
 ```
 
 ---

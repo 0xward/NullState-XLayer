@@ -80,7 +80,7 @@ function carveCells(g,r){
 // containers, so effort and reward scale together without a second knob.
 //
 // Kept modest on purpose. MEASURED AFTER: bunker 5 is ~1.65x the walkable area
-// of bunker 1, with ~1.55x the enemies and ~1.5x the rooms. A MiniPay session is
+// of bunker 1, with ~1.55x the enemies and ~1.5x the rooms. A session is
 // 3-10 minutes on a mid-range phone, so bunker 1 stays the short option — which
 // is the whole point of an axis rather than a global difficulty bump.
 const ACT_SIZE = { w: 3, h: 2, rooms: 1 };

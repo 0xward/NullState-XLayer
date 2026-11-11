@@ -7,7 +7,7 @@ import { ensureWeeklyCodeOnChain, getVaultClients, isCodeOnChain } from '@/lib/s
 export const dynamic = 'force-dynamic'
 
 // Storing a code is one write and normally finishes in a couple of seconds,
-// but it waits for a Celo receipt and Vercel's 10s default is not a margin.
+// but it waits for an X Layer receipt and Vercel's 10s default is not a margin.
 export const maxDuration = 30
 
 // =============================================
@@ -20,7 +20,7 @@ export const maxDuration = 30
 // time anyone won in a given week: store the week's code, then pay. Only the
 // FIRST winner of the week took that path, which is why the failure looked
 // random and survived for weeks — and the second write is the one that got
-// dropped by a load-balanced Forno before it ever reached the mempool. Measured
+// dropped by a load-balanced RPC endpoint before it ever reached the mempool. Measured
 // on chain for week 202632: "Store Weekly Vault Code" succeeded, "Submit Vault
 // Code" was never broadcast at all. The pool was fine. Gas was fine. The code
 // was set. The transaction simply did not exist.

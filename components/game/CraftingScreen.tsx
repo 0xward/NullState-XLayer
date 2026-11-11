@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { GiAnvil, GiCheckedShield, GiSandsOfTime } from 'react-icons/gi'
-import { useWallet, CELO_CHAIN_ID } from '@/lib/WalletProvider'
+import { useWallet } from '@/lib/WalletProvider'
 import WrongNetworkBar from './WrongNetworkBar'
 import { pickBestPaymentToken } from '@/lib/constants/tokens'
 import {
@@ -97,13 +97,13 @@ function fmtDur(ms: number): string {
 
 export default function CraftingScreen({ onBack, onGoToRun, address }: CraftingScreenProps) {
   const wallet = useWallet()
-  const { buyMarketplaceItem, insufficientFunds, addCashUrl } = wallet
+  const { buyMarketplaceItem, insufficientFunds } = wallet
   // From the wallet bridge, not wagmi's usePublicClient(): wagmi now mounts
   // beside the app rather than around it (lib/walletBridge.tsx), so this
   // screen is not inside WagmiProvider and calling its hooks here would throw.
   // Null until wagmi has loaded; the effect below already handles that.
   const publicClient = wallet.publicClient
-  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDm')
+  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDC')
   // Flexible stablecoin (Phase 2): default the pay-with token to the largest
   // balance the wallet holds; the manual selector still overrides.
   const manualTokenRef = useRef(false)
@@ -494,7 +494,7 @@ export default function CraftingScreen({ onBack, onGoToRun, address }: CraftingS
         </header>
 
         {/* Connected but on the wrong chain — see WrongNetworkBar. Renders
-            nothing at all on Celo, and cannot appear inside MiniPay. */}
+            nothing at all on X Layer. */}
         <WrongNetworkBar />
 
         {/* shard balance strip */}
@@ -535,11 +535,10 @@ export default function CraftingScreen({ onBack, onGoToRun, address }: CraftingS
             : 'border-[#7a4f24]/50 bg-[#7a4f24]/10 text-[#e8c37a]'
           }`}>
             <div>{msg.text}</div>
-            {msg.kind === 'err' && insufficientFunds && addCashUrl && (
-              <a href={addCashUrl} target="_blank" rel="noopener noreferrer"
-                className="mt-2 inline-block text-[#f2cd82] underline underline-offset-2">
-                Deposit in MiniPay →
-              </a>
+            {msg.kind === 'err' && insufficientFunds && (
+              <p className="mt-2 text-[#f2cd82]">
+                Top up USDC/USDT — and a little OKB for gas — in your wallet, then try again.
+              </p>
             )}
           </div>
         )}

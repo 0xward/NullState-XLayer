@@ -14,7 +14,7 @@ import { setMusicVolume, setSfxEnabled, setSoundMuted, startAudio } from '@/lib/
 //
 // So this screen carries only what is true outside a run: the preferences
 // themselves (now persisted, see lib/gameSettings), the player's name, and the
-// links MiniPay requires. Changes land in the same storage the run reads at
+// links every player should reach. Changes land in the same storage the run reads at
 // mount, so setting the volume here is what the next bunker starts with.
 //
 // Styled to the map, not to the old modal: the in-game one is a light
@@ -191,7 +191,7 @@ export default function SettingsScreen({ onBack, playerProfile, setPlayerUsernam
           {nameState === 'error' && <p className="mt-2 font-mono text-[10px]" style={{ color: '#ff8a6a' }}>{nameError}</p>}
         </section>
 
-        {/* ── Account + the links MiniPay requires ── */}
+        {/* ── Account + the legal links ── */}
         <section className="rounded-lg border p-3" style={{ borderColor: 'rgba(255,255,255,.1)', background: 'rgba(43,26,13,.5)' }}>
           <AccountPanel />
           <div className="mt-3 flex flex-wrap items-center justify-center gap-1 border-t pt-2" style={{ borderColor: 'rgba(255,255,255,.08)' }}>

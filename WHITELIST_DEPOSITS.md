@@ -8,7 +8,7 @@ This guide covers:
 3. Depositing season bonus pools
 4. Depositing the TreasureVault reward pool
 
-All operations are owner-only and can be done via Celoscan's Write Contract UI
+All operations are owner-only and can be done via the X Layer explorer's Write Contract UI
 or via a script.
 
 ---
@@ -20,8 +20,8 @@ or via a script.
 **Contract:** PassSBT (`NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS`)
 **Function:** `addToWhitelist(address _user, uint256 _seasonId)`
 
-Via Celoscan:
-1. Open `https://celoscan.io/address/<PASS_SBT_ADDRESS>#writeContract`
+Via the X Layer explorer:
+1. Open `https://www.okx.com/web3/explorer/xlayer/address/<PASS_SBT_ADDRESS>` and use its Write Contract tab
 2. Connect your owner wallet
 3. Call `addToWhitelist` with the user address and season ID (e.g. `202607`)
 
@@ -44,7 +44,7 @@ const ADDRESSES = [
 ];
 
 async function main() {
-  const provider = new ethers.JsonRpcProvider(process.env.CELO_RPC_URL);
+  const provider = new ethers.JsonRpcProvider(process.env.XLAYER_RPC_URL);
   const wallet = new ethers.Wallet(process.env.OWNER_PRIVATE_KEY, provider);
   const contract = new ethers.Contract(
     process.env.PASS_SBT_ADDRESS,
@@ -73,7 +73,7 @@ main().catch(console.error);
 
 Run with:
 ```bash
-CELO_RPC_URL=https://forno.celo.org \
+XLAYER_RPC_URL=https://rpc.xlayer.tech \
 OWNER_PRIVATE_KEY=<your_key> \
 PASS_SBT_ADDRESS=<contract_address> \
 node scripts/batch-whitelist.js
@@ -94,15 +94,15 @@ node scripts/batch-whitelist.js
 | Parameter | Value |
 |---|---|
 | `_week` | ISO week ID in `YYYYWW` format (e.g. `202627` for week 27 of 2026) |
-| `_rewardToken` | `0x765DE816845861e75A25fCA122bb6898B8B1282a` (USDm) |
-| `_amount` | Amount in wei — e.g. `2000000000000000000` for 2 USDm |
+| `_rewardToken` | `0xB6CEceAB302E2E4948951eE7843FC24E92933061` (USDC) |
+| `_amount` | Amount in base units — e.g. `2000000` for 2 USDC |
 
-**Before calling:** Approve NullStateReward to spend USDm:
+**Before calling:** Approve NullStateReward to spend USDC:
 ```
-USDm.approve(<REWARD_CONTRACT_ADDRESS>, <amount>)
+USDC.approve(<REWARD_CONTRACT_ADDRESS>, <amount>)
 ```
 
-**Weekly pool size:** 2 USDm (`2000000000000000000` wei)
+**Weekly pool size:** 2 USDC (`2000000` base units)
 
 ---
 
@@ -110,15 +110,15 @@ USDm.approve(<REWARD_CONTRACT_ADDRESS>, <amount>)
 
 **Function:** `depositSeasonBonus(uint256 _seasonId, address _rewardToken, uint256 _amount)`
 
-**Minimum amount:** Rank 1 (20 USDm) + Rank 2 (5 USDm) + Rank 3 (3 USDm) = **28 USDm**
+**Minimum amount:** Rank 1 (20 USDC) + Rank 2 (5 USDC) + Rank 3 (3 USDC) = **28 USDC**
 
 | Parameter | Value |
 |---|---|
 | `_seasonId` | e.g. `202607` |
-| `_rewardToken` | `0x765DE816845861e75A25fCA122bb6898B8B1282a` (USDm) |
-| `_amount` | `28000000000000000000` (28 USDm minimum) |
+| `_rewardToken` | `0xB6CEceAB302E2E4948951eE7843FC24E92933061` (USDC) |
+| `_amount` | `28000000` (28 USDC minimum) |
 
-**Before calling:** Approve NullStateReward to spend 28+ USDm.
+**Before calling:** Approve NullStateReward to spend 28+ USDC.
 
 ---
 
@@ -127,14 +127,14 @@ USDm.approve(<REWARD_CONTRACT_ADDRESS>, <amount>)
 **Contract:** TreasureVault (`NEXT_PUBLIC_TREASURE_VAULT_ADDRESS`)
 **Function:** `depositVaultPool(address _token, uint256 _amount)`
 
-**Vault reward:** 1 USDm per successful vault claim.
+**Vault reward:** 1 USDC per successful vault claim.
 
 Deposit enough for the expected number of weekly claimants. For example, to
-fund 10 claims: `10000000000000000000` (10 USDm).
+fund 10 claims: `10000000` (10 USDC).
 
-**Before calling:** Approve TreasureVault to spend USDm:
+**Before calling:** Approve TreasureVault to spend USDC:
 ```
-USDm.approve(<VAULT_ADDRESS>, <amount>)
+USDC.approve(<VAULT_ADDRESS>, <amount>)
 ```
 
 ---
@@ -143,12 +143,9 @@ USDm.approve(<VAULT_ADDRESS>, <amount>)
 
 | Token | Address |
 |---|---|
-| USDm (recommended) | `0x765DE816845861e75A25fCA122bb6898B8B1282a` |
-| USDT | `0x88eEc42eaf6E1b371f4a7e786fDDB2E782b72ccA` |
-| USDC | `0xeF63B1FdEfA2C442f41911160bCEFdaD5896e107` |
-| CELO (native) | `0x471ecE3750da237F93b8e339C536Cb1483c48E8f` |
-
----
+| USDC (recommended) | `0xB6CEceAB302E2E4948951eE7843FC24E92933061` |
+| USDT0 | `0x779Ded0c9e1022225f8E0630b35a9b54bE713736` |
+| OKB (native gas token) | — (no contract address) |
 
 ## 6. Emergency Withdrawal
 
@@ -166,7 +163,7 @@ If funds need to be recovered, the owner can call:
 Before each season:
 - [ ] Season initialized via `initializeSeason()` on PassSBT
 - [ ] Whitelist addresses added via `addBatchWhitelist()`
-- [ ] Season bonus deposited (28+ USDm) via `depositSeasonBonus()`
-- [ ] Weekly pool deposited (2 USDm/week) via `depositWeeklyPool()`
+- [ ] Season bonus deposited (28+ USDC) via `depositSeasonBonus()`
+- [ ] Weekly pool deposited (2 USDC/week) via `depositWeeklyPool()`
 - [ ] Vault pool funded via `depositVaultPool()`
 - [ ] GitHub Secrets configured (see `FIREBASE_SETUP.md`)

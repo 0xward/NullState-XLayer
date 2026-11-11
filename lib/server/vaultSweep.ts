@@ -9,7 +9,7 @@ type Db = NonNullable<ReturnType<typeof getAdminDb>>
 // the payout did not go through, and the ONLY way the game offered to retry it
 // was to open the vault door again — which means re-entering Bunker 5, clearing
 // it, killing the final boss, and getting back to the door. He recovered his
-// reward by reading the contract on celoscan and working out what had happened.
+// reward by reading the contract on the explorer and working out what had happened.
 // A player cannot do that. For them the sequence is: win, get nothing, and have
 // no route back to the money at all.
 //

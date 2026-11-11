@@ -123,7 +123,7 @@ const Audio = (() => {
   // ---- per-weapon attack SFX (v76 Task #7) ----------------------------------
   // Every marketplace weapon names a `sfx` kind in NS_WEAPON (assets.js) and
   // hitTest() routes it here via Audio.attackFor(kind). All synthesized — no
-  // audio files, so the MiniPay bundle gains zero bytes. Unknown kind (or no
+  // audio files, so the bundle gains zero bytes. Unknown kind (or no
   // weapon equipped) falls through to the original attack() whoosh, so the
   // bare-fist sound is unchanged.
   //

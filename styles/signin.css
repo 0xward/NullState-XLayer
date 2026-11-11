@@ -3,7 +3,7 @@
    Its own stylesheet for the same reason settings.css is: styles/game.css is
    imported by app/game/layout.tsx and therefore blocks the world map's first
    paint, and this screen is not on that path. Nobody reaches it without first
-   starting a run, and most players — everyone inside MiniPay, everyone who
+   starting a run, and most players — everyone with a wallet, everyone who
    already has a wallet, everyone who has skipped once — never reach it at all.
 
    Imported by components/game/SignInScreen.tsx, so Next emits it as that
@@ -130,8 +130,8 @@
 /* Skip is a plain underlined control, not a bordered button: it has to be
    unmissable without competing with the thing being recommended. It is
    deliberately NOT dimmed below the body text's contrast — an escape hatch
-   nobody can read is a dark pattern, and it is one MiniPay's reviewers look
-   for. Same --null-muted the lede uses, which was raised to ~5:1 in the
+   nobody can read is a dark pattern, and it is exactly the kind of thing
+   listing reviewers look for. Same --null-muted the lede uses, which was raised to ~5:1 in the
    legibility pass. */
 .ns-signin-skip{
   display:block; margin:18px auto 0; padding:8px 14px;
@@ -149,7 +149,7 @@
   letter-spacing:.4px; color:var(--null-muted);
 }
 
-/* Short viewports (a 360x640 MiniPay-minimum browser, or a phone with the
+/* Short viewports (a 360x640 minimum browser, or a phone with the
    keyboard up) must not clip the skip control off the bottom. */
 @media (max-height:680px){
   .ns-signin-panel{ padding:22px 20px 18px }

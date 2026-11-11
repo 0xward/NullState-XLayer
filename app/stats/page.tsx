@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
-// Public analytics/operational-visibility page required for MiniPay listing
-// (celopedia-skill → minipay-requirements.md §8). No wallet needed — it reads
+// Public analytics/operational-visibility page. No wallet needed — it reads
 // aggregated numbers from /api/stats (Firebase-backed) and renders them.
 
 // GAME-DESIGN.md §9. The season bonus is paid by hand, on purpose — the owner
@@ -33,7 +32,7 @@ interface StatsPayload {
   }
   onchain: {
     purchases: number
-    purchasesByToken: { USDM: number; USDC: number; USDT: number }
+    purchasesByToken: Record<string, number>
     purchaseVolumeUsd: number
     uniqueBuyers?: number
     netUsd?: number
@@ -81,9 +80,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 // ─── Real-user load speed ────────────────────────────────────────────────────
-// MiniPay's listing review grades load speed on the p75 of REAL users, so it is
-// surfaced here rather than left in a PostHog tab: a reviewer (and we) can see
-// it without leaving the page. Filled by /api/webvitals, which reads it back
+// Load speed is graded on the p75 of REAL users, so it is surfaced here
+// rather than left in a PostHog tab: anyone can see it without leaving the
+// page. Filled by /api/webvitals, which reads it back
 // out of PostHog server-side — the key that query needs must never reach a
 // browser.
 
@@ -214,6 +213,16 @@ export default function StatsPage() {
 
   const t = data?.onchain
   const maxDay = Math.max(1, ...(t?.purchasesPerDay ?? [1]))
+  // Purchases per payment token, current tokens first. Historic rows may
+  // carry symbols no longer accepted — they still count, listed after.
+  const paidWithEntries = Object.entries(t?.purchasesByToken ?? {})
+    .sort(([a], [b]) => (a === 'USDC' ? -1 : b === 'USDC' ? 1 : a === 'USDT' ? -1 : b === 'USDT' ? 1 : a.localeCompare(b)))
+  const paidWith = paidWithEntries.length
+    ? paidWithEntries.map(([, n]) => fmt(n)).join('·')
+    : '—'
+  const paidWithHint = paidWithEntries.length
+    ? paidWithEntries.map(([k]) => k).join(' · ')
+    : 'no purchases yet'
 
   return (
     <div className="min-h-[100dvh] bg-[rgba(0,0,0,0.96)] p-4 sm:p-8">
@@ -339,8 +348,8 @@ export default function StatsPage() {
               />
               <Stat
                 label="Paid with"
-                value={`${fmt(t?.purchasesByToken.USDM)}·${fmt(t?.purchasesByToken.USDC)}·${fmt(t?.purchasesByToken.USDT)}`}
-                hint="USDM · USDC · USDT"
+                value={paidWith}
+                hint={paidWithHint}
                 accent="#f0dcb8"
               />
             </Section>
@@ -440,7 +449,7 @@ export default function StatsPage() {
 
             <p className="mt-2 font-mono text-[9px] leading-relaxed text-null-muted">
               Live figures aggregated from NullState’s off-chain database (game activity + recorded on-chain
-              purchases, Season-Pass mints, and Treasure-Vault / Season reward payouts on Celo). Refreshed every
+              purchases, Season-Pass mints, and Treasure-Vault / Season reward payouts on X Layer). Refreshed every
               few minutes. Last updated {new Date(data.generatedAt).toLocaleString()}.
             </p>
           </>

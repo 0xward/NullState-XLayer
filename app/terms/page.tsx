@@ -5,7 +5,7 @@ import Footer from '@/components/ui/Footer'
 
 export const metadata = {
   title: 'Terms of Service — NULL_STATE',
-  description: 'Terms of Service for NULL_STATE, a Web3 RPG on Celo. Operated by 1892 Studio.',
+  description: 'Terms of Service for NULL_STATE, a Web3 RPG on X Layer. Operated by 1892 Studio.',
 }
 
 const LAST_UPDATED = 'July 21, 2026'
@@ -52,9 +52,9 @@ export default function TermsPage() {
               <p>
                 The Game is developed and operated by <strong className="text-null-white">1892 Studio</strong> (&quot;Publisher&quot;,
                 &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;). NULL_STATE is an independent application; it is
-                not affiliated with, endorsed by, or operated by MiniPay, Opera, or the Celo
+                not affiliated with, endorsed by, or operated by OKX or the X Layer
                 Foundation. References to those platforms reflect the technology the Game is
-                built on or distributed through, not any form of joint operation or sponsorship.
+                built on, not any form of joint operation or sponsorship.
               </p>
             </div>
           </section>
@@ -66,11 +66,11 @@ export default function TermsPage() {
             </h2>
             <div className="pl-4 flex flex-col gap-3">
               <p>
-                NULL_STATE is a real-time dungeon-crawler RPG deployed on the Celo blockchain.
+                NULL_STATE is a real-time dungeon-crawler RPG deployed on the X Layer blockchain.
                 Players connect a self-custodied wallet and participate in item collection and
                 season competitions. Movement, combat, looting, and NULL_STRIKE are all free and
                 off-chain; only specific optional actions — such as Marketplace purchases and
-                Season Pass minting — are executed as signed transactions on Celo mainnet. Weekly
+                Season Pass minting — are executed as signed transactions on X Layer mainnet. Weekly
                 Treasure Vault and seasonal Leaderboard USDT rewards are paid out to your
                 wallet by 1892 Studio when earned.
               </p>
@@ -81,7 +81,7 @@ export default function TermsPage() {
               </p>
               <p>
                 <strong className="text-null-white">Guest Play:</strong>{' '}
-                Outside of MiniPay you may play without connecting a wallet. In this &ldquo;guest&rdquo;
+                You may play without connecting a wallet. In this &ldquo;guest&rdquo;
                 mode, progress is stored locally on your device (browser localStorage). Guest play
                 cannot receive USDT rewards. When you later connect a wallet, your guest
                 progress is migrated onto that wallet account on a best-effort basis. Clearing your
@@ -179,7 +179,7 @@ export default function TermsPage() {
               </p>
               <p>
                 <strong className="text-null-white">Digital Asset Volatility:</strong>{' '}
-                CELO and USDM values can fluctuate significantly. In-game rewards have no
+                OKB and stablecoin values can fluctuate significantly. In-game rewards have no
                 guaranteed monetary value. You participate at your own financial risk.
               </p>
               <p>
@@ -204,25 +204,26 @@ export default function TermsPage() {
             <div className="pl-4 flex flex-col gap-3">
               <p>
                 <strong className="text-null-white">Blockchain Infrastructure:</strong>{' '}
-                The Game operates on the Celo blockchain network. 1892 Studio is not liable for
-                financial losses caused by Celo network congestion, fork events, network
+                The Game operates on the X Layer blockchain network. 1892 Studio is not liable for
+                financial losses caused by X Layer network congestion, fork events, network
                 downtime, or smart contract vulnerabilities.
               </p>
               <p>
                 <strong className="text-null-white">Stablecoin Moneyflow Risk:</strong>{' '}
-                The Game uses digital stablecoins including but not limited to USDM, USDT,
-                and USDC for in-game transactions, rewards, and moneyflows. 1892 Studio does not
+                The Game uses digital stablecoins including but not limited to USDC and
+                USDT for in-game transactions, rewards, and moneyflows. 1892 Studio does not
                 control the issuance, backing, liquidity, or stability of these third-party
                 tokens and is not liable for losses arising from de-pegging, smart contract
-                failure, freeze functions, or collapse of USDM, USDT, or USDC.
+                failure, freeze functions, or collapse of USDC or USDT.
               </p>
               <p>
-                <strong className="text-null-white">MiniPay Integration &amp; Non-Custodial Status:</strong>{' '}
-                NULL_STATE is listed on MiniPay, a third-party non-custodial wallet interface.
-                1892 Studio does not control, manage, or hold custody of your digital assets, private
-                keys, or seed phrases. You are solely responsible for securing your wallet, and
-                1892 Studio is not liable for wallet-level technical failures, unauthorized access, or
-                loss of assets within MiniPay.
+                <strong className="text-null-white">Wallet &amp; Non-Custodial Status:</strong>{' '}
+                NULL_STATE connects to your own self-custodied wallet — a third-party,
+                non-custodial wallet interface. 1892 Studio does not control, manage, or
+                hold custody of your digital assets, private keys, or seed phrases. You are
+                solely responsible for securing your wallet, and 1892 Studio is not liable
+                for wallet-level technical failures, unauthorized access, or loss of assets
+                within your wallet.
               </p>
             </div>
           </section>
@@ -237,13 +238,13 @@ export default function TermsPage() {
               <ul className="flex flex-col gap-2 font-mono text-sm">
                 {[
                   'Use cheat scripts, macros, bots, hacks, mods, or unauthorized third-party software to interact with the Service.',
-                  'Exploit, abuse, or share bugs, glitches, or vulnerabilities to gain unfair gameplay advantages or unauthorized economic rewards (including USDM, USDT, or USDC distributions).',
+                  'Exploit, abuse, or share bugs, glitches, or vulnerabilities to gain unfair gameplay advantages or unauthorized economic rewards (including USDC or USDT distributions).',
                   'Reverse-engineer, decompile, disassemble, scrape, or tamper with frontend code, client scripts, APIs, or proprietary game data beyond permissions granted by applicable licences.',
                   'Conduct Sybil attacks, malicious multi-account behavior, or automated manipulation of leaderboards, rewards, or airdrops.',
                   'Bypass the frontend to maliciously interact with deployed smart contracts, including any flash loan, reentrancy, or math-bug exploitation.',
                   'Harass, threaten, or abuse other users.',
                   'Use the Service for money laundering, fraud, or any illegal purpose.',
-                  'Impersonate 1892 Studio, MiniPay, Celo, or any other entity.',
+                  'Impersonate 1892 Studio, OKX, or any other entity.',
                   'Circumvent or attempt to circumvent any security or access-control mechanism.',
                 ].map((item) => (
                   <li key={item} className="pl-4 relative before:content-[&apos;—&apos;] before:absolute before:left-0 before:text-null-green">
@@ -278,7 +279,7 @@ export default function TermsPage() {
               </p>
               <p>
                 On-chain data (your wallet address, transaction history, leaderboard rankings,
-                Pass NFTs) is public by nature of the Celo blockchain and is not the exclusive
+                Pass NFTs) is public by nature of the X Layer blockchain and is not the exclusive
                 property of 1892 Studio or any other party.
               </p>
               <p>
@@ -297,7 +298,7 @@ export default function TermsPage() {
               </p>
               <p>
                 <strong className="text-null-white">Blockchain Assets (NFTs):</strong>{' '}
-                To the extent the Game permits minting Digital Assets or NFTs on Celo, you own
+                To the extent the Game permits minting Digital Assets or NFTs on X Layer, you own
                 the underlying cryptographic token, but this ownership does not grant intellectual
                 property rights in underlying artwork, brands, trademarks, or proprietary code
                 owned by 1892 Studio, unless expressly stated in a separate NFT License Agreement.

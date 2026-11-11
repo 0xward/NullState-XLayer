@@ -15,24 +15,25 @@ two on-chain reward pools from Termux. Everything below is run with
 | Role | Address | Where its key lives | Used for |
 |------|---------|--------------------|----------|
 | **Deployer / Owner** | `0x2A6b5204B83C7619c90c4EB6b5365AA0b7d912F7` | `scripts/.env` (Termux only) | All `onlyOwner` CLI ops below |
-| **Backend** | `0xAb73e0E942ecAAF634216EFb78786fa0F92f2eb6` | `BACKEND_PRIVATE_KEY` on Vercel | Auto-signs the weekly vault code + payout. Needs a little CELO for gas. |
+| **Backend** | `0xAb73e0E942ecAAF634216EFb78786fa0F92f2eb6` | `BACKEND_PRIVATE_KEY` on Vercel | Auto-signs the weekly vault code + payout. Needs a little OKB for gas. |
 
-Both wallets need a small CELO balance for gas.
+Both wallets need a small OKB balance for gas.
 
-## Contracts (Celo mainnet)
+## Contracts (X Layer testnet — live test deployment, chain 1952)
+
+Mainnet contracts are not deployed yet — add their addresses here after the mainnet deploy.
 
 | Contract | Address | ID scheme |
 |----------|---------|-----------|
-| Treasure Vault (weekly) | `0xB145dE296cD37Cb2A62Ced70Ee4d93c1d78df742` | ISO week `YYYYWW` |
-| Season Bonus / RewardV3 (monthly) | `0xec2e7fe57a92ada02c1ab37d9415dad508b7f111` | Month `YYYYMM` |
+| PassSBTv3 | `0x5e51fe3036ed867053e1625edca3e0c0e96aac94` | Season `YYYYMM` |
+| Treasure Vault (weekly) | `0x55567455a9be9e764cdf983a31e7d1e23c67d7ee` | ISO week `YYYYWW` |
+| Season Bonus / RewardV3 (monthly) | `0x50b16bd7edb7b533aaee9457c16c8f3526012eaf` | Month `YYYYMM` |
 
-Tokens (Celo): **USDT** `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e` (6 dec) ·
-**USDC** `0xcebA9300f2b948710d2653dD7B07f33A8B32118C` (6 dec) ·
-**USDM** `0x765DE816845861e75A25fCA122bb6898B8B1282a` (18 dec).
+Tokens (X Layer): **USDC** `0xB6CEceAB302E2E4948951eE7843FC24E92933061` (6 dec) ·
+**USDT0** `0x779Ded0c9e1022225f8E0630b35a9b54bE713736` (6 dec).
+Testnet: **tUSD** `0x15524d9ee28a7553119c75ed9b17775db925ce90` (test token).
 All `--amount` flags are in **human dollars** — the script scales to the token's
 decimals for you.
-
----
 
 ## Which commands can be re-run, and when
 
@@ -67,7 +68,7 @@ node scripts/deposit-reward.js status
 
 The weekly code is stored on-chain **automatically** by the backend the first
 time a player submits the correct code — no manual `store-vault-code` needed.
-Just make sure the backend wallet holds a little CELO for that gas.
+Just make sure the backend wallet holds a little OKB for that gas.
 
 ## Monthly Season Bonus — setup / top-up
 
@@ -96,11 +97,7 @@ node scripts/deposit-reward.js update-leaderboard --season 202607 \
 node scripts/deposit-reward.js pay --token USDT --to 0xRANK4 --amount 1
 ```
 
-> **Historical note.** The ledger below records the rank rewards being set to
-> $1 / $0.60 / $0.40 on 2026-07-22 while the app's `RANK_REWARDS_USD` said
-> $20 / $5 / $3 — so `/stats` promised a figure `claimSeasonBonus` would not have
-> paid. Step 1 is now emitted as `commands[0]` of every payout so the two are
-> re-synced by the act of paying.
+> **Note.** Step 1 is emitted as `commands[0]` of every payout so the on-chain amounts and the app's `RANK_REWARDS_USD` are re-synced by the act of paying.
 
 `--s1/--s2/--s3` are the winners' Abyss depth/scores (for display on-chain),
 not money. Get them from the Abyss leaderboard.
@@ -112,9 +109,9 @@ not money. Get them from the Abyss leaderboard.
 If a player entered the correct code but no USDT arrived, the payout got stuck
 (the backend recorded the win but its `submitVaultCode` tx never landed — e.g.
 a serverless timeout on the first win of the week, or the backend wallet was
-out of CELO gas). Two ways to recover:
+out of OKB gas). Two ways to recover:
 
-1. **Easiest:** make sure the backend wallet `0xAb73…` has a little CELO, then
+1. **Easiest:** make sure the backend wallet `0xAb73…` has a little OKB, then
    have the player **reopen the vault and enter the code again**. The server
    now self-heals — it retries only the payout (the code is already stored
    on-chain, so it's a single fast tx) and pays out.
@@ -134,9 +131,3 @@ Verify with `status` afterwards — `pool available` should drop by one reward.
 
 Append a line each time you fund something. Format:
 `YYYY-MM-DD · <vault|season YYYYMM> · +$<amount> <token> · tx <hash>`
-
-- 2026-07-22 · vault reward set $0.05 USDT · tx 0xa211c9f3b982e31812bcde5ce7757c14a9957f9d8ff63acf3d92ae9f0b0a018c
-- 2026-07-22 · vault · +$1 USDT · tx 0x8cf4a8a8276167b9765562922378faa6ab32bcfa3de7615a36908c0ede10ab5f
-- 2026-07-22 · vault-pay winner 0x444e…c0Bb (recovery, week 202630) · −$0.05 USDT · tx 0x6b7e6605919d6fd8d17aa37b0e56104b0b0c1bb143d022ccbd7f6202a3c30225
-- 2026-07-22 · season 202607 rank rewards set $1 / $0.60 / $0.40 USDT · tx 0xf4ab89932f5a496fba0eb227d812a0ebdf1617255719336ea2d9dbd2b16ad735
-- 2026-07-22 · season 202607 · +$2 USDT · tx 0x8bdaa6b3ab8423a0bc8baf82988867e3f943b8b7b0ad52e1bbb92ec3777a085c

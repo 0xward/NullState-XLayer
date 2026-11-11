@@ -53,7 +53,7 @@ const DECOR_TYPES = {
   crate:    { hp:2, w:44, h:44, drawScale:1.3, label:'Supply Crate', loot:[['xp',22,36],['hp',8,20],['item',1,20],['food',1,24]] },
   cabinet_s:{ hp:2, w:34, h:46, label:'Forgotten Archive', loot:[['hp',14,26],['xp',24,24],['item',2,30],['relic',1,10]], interactive:true, containerMaterial:'wood', northOnly:true }, // owner: cabinets/safes hug the NORTH wall only
   wardrobe: { hp:3, w:48, h:64, label:'Rotten Armoire',  loot:[['hp',32,24],['xp',55,24],['item',2,32]], interactive:true, containerMaterial:'wood_rotten', northOnly:true },
-  // ---- ancient ornaments: break them for XP, CELO, or rare relics ----
+  // ---- ancient ornaments: break them for XP, HP, shards, or rare relics ----
   urn:      { hp:1, w:30, h:44, label:'Burial Urn',      loot:[['xp',20,40],['hp',10,28],['relic',1,12],['gshard',1,6],['none',0,20]] },
   column:   { hp:3, w:34, h:60, label:'Cracked Column',  loot:[['xp',26,50],['hp',12,26],['relic',1,8],['none',0,16]] },
   brazier:  { hp:2, w:30, h:40, label:'Bronze Brazier',  loot:[['xp',24,48],['hp',10,30],['none',0,12]] },
@@ -318,7 +318,7 @@ class Decor {
   // Generate (once) 2-4 loot slots for the dual-panel container window.
   // Each slot resolves 'item' draws into a concrete NS_ITEMS entry so the
   // window can show a real name/icon/rarity/burn-value preview immediately,
-  // while non-item draws (hp/xp/celo/relic) stay as simple amount pickups.
+  // while non-item draws (hp/xp/relic) stay as simple amount pickups.
   //
   // Golden Key: previously its own standalone floor pickup (one per match,
   // drawn/walked-over directly on the tile grid) — that code path lived

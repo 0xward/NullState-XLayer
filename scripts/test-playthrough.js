@@ -20,7 +20,7 @@
  * driven on a harness page that loads the engine's 14 scripts directly, exactly
  * as every other engine test here does — NOT because that is easier, but
  * because a click-through cannot complete in this sandbox: with no wallet and
- * no Celo RPC the shell sits on "loading player profile…" forever, so DungeonGame
+ * no X Layer RPC the shell sits on "loading player profile…" forever, so DungeonGame
  * never mounts and never loads the engine. That is an environment limit, not a
  * defect, and pretending otherwise would make this test a liar. What it costs
  * is coverage of the single hand-off between the shell and the engine; what it
@@ -62,7 +62,7 @@ const clean = () => { try { fs.rmSync(dir, { recursive: true, force: true }) } c
   // Every uncaught error, for the whole session. A playthrough that "passes"
   // while throwing in the render loop has not passed.
   const errs = []
-  // The sandbox has no route to Firebase or Celo, so the shell logs connection
+  // The sandbox has no route to Firebase or X Layer, so the shell logs connection
   // failures that say nothing about the game. Each pattern below is named for
   // the thing it excuses; anything else — including any thrown exception —
   // still fails the run. Widening this list is how a test stops finding bugs,

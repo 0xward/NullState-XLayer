@@ -1,7 +1,7 @@
 /**
  * NullState Web3 Client
  *
- * Viem public client configured for Celo Mainnet.
+ * Viem public client configured for X Layer Mainnet.
  * Use this for read-only contract calls outside of React hooks
  * (e.g. API routes, server-side data fetching).
  *
@@ -9,15 +9,14 @@
  */
 
 import { createPublicClient } from 'viem'
-import { celoTransport } from '@/lib/celoRpc'
-import { celo } from 'viem/chains'
+import { xlayerTransport, xLayerChain } from '@/lib/xlayerRpc'
 
 export const publicClient = createPublicClient({
-  chain: celo,
-  // Endpoint choice lives in lib/celoRpc.ts so the browser and the server can
+  chain: xLayerChain,
+  // Endpoint choice lives in lib/xlayerRpc.ts so the browser and the server can
   // never disagree about it — they used to, and only this half honoured the
   // env var.
-  transport: celoTransport(),
+  transport: xlayerTransport(),
 })
 
 /** ISO week helper — returns YYYYWW (e.g. 202627) */

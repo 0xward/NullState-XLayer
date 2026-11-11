@@ -14,7 +14,7 @@ import {
 
 // Headroom for the on-chain payout to confirm inside the request. It is now
 // normally ONE write (lib/server/vaultChain.ts explains why), but a payout that
-// waits for a Celo receipt still needs more than Vercel's 10s default — that
+// waits for an X Layer receipt still needs more than Vercel's 10s default — that
 // default is what killed the request after the code was stored and before
 // submitVaultCode was ever broadcast.
 export const maxDuration = 60
@@ -76,7 +76,7 @@ async function finalizeVaultPayout(params: {
   // reported as pending or the sweep will keep retrying a settled reward.
   //
   // Recorded as `paidOnChain` rather than by inventing a txHash: the popup
-  // turns txHash into a celoscan link, and a link to a hash that does not exist
+  // turns txHash into an explorer link, and a link to a hash that does not exist
   // is worse than no link. The settled-check below reads both.
   if (result.reason === 'already_claimed') {
     await db.ref(`vaultCompleted/${weekId}/${normalizedWallet}`).update({

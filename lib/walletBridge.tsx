@@ -3,13 +3,11 @@
 import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react'
 import type { Account, PublicClient, Transport, WalletClient } from 'viem'
 
-// The Celo chain TYPE, not the value. `typeof import(...)` is erased at
-// compile time, so viem/chains never enters this module's runtime graph and
-// the wagmi split stays intact — but the client below keeps Celo's formatters,
-// which is what makes `feeCurrency` (CIP-64 fee abstraction) a known field on
-// writeContract/sendTransaction. Typed as a plain WalletClient it is not, and
-// every call site that pays gas in a stablecoin stops compiling.
-type CeloChain = typeof import('viem/chains').celo
+// The X Layer chain TYPE, not the value. `typeof import(...)` is erased at
+// compile time, so viem never enters this module's runtime graph and the
+// wagmi split stays intact — but the client below keeps X Layer's formatters,
+// which is what makes sendTransaction type-check on this chain.
+type XLayerChain = typeof import('./xlayerRpc').xLayerChain
 import type { MarketplaceTokenSymbol } from './constants/tokens'
 
 // ─── Why a bridge sits between the app and wagmi ─────────────────────────────
@@ -40,24 +38,22 @@ export interface WalletBridgeValue {
   address: string | null
   isConnected: boolean
   chainId: number | null
-  isMiniPay: boolean
   /**
    * Connected, but the wallet is sitting on some other chain.
    *
    * NOT a cosmetic flag. wagmi's getConnectorClient throws
    * ConnectorChainMismatchError when the connector's chain is not the one
-   * asked for, so useWalletClient({chainId: CELO}) resolves to undefined and
+   * asked for, so useWalletClient({chainId: XLAYER}) resolves to undefined and
    * every payment path fails its `!walletClient` guard — which used to report
    * "Wallet not connected" to somebody whose wallet was perfectly connected.
    * OKX and most browser wallets open on their own default chain, so this is
-   * the normal state for them until the switch lands. MiniPay is Celo-only and
-   * can never be in it.
+   * the normal state for them until the switch lands.
    */
   wrongNetwork: boolean
-  celoBalance: string
+  /** Native OKB balance of the connected wallet, as a 2-decimal string. */
+  nativeBalance: string
   error: string | null
   insufficientFunds: boolean
-  addCashUrl: string | null
   /** Read-only chain client, for balance checks. Null until wagmi mounts.
    *  Carried here so screens that only READ the chain (picking which
    *  stablecoin a player holds most of) don't have to sit inside
@@ -67,11 +63,11 @@ export interface WalletBridgeValue {
   publicClient: PublicClient | null
   /** Signing client, for the one on-chain write the app does outside
    *  payToTreasury: the Season Pass mint. Null until wagmi mounts. */
-  walletClient: WalletClient<Transport, CeloChain, Account> | null
+  walletClient: WalletClient<Transport, XLayerChain, Account> | null
   connect: () => Promise<void>
   disconnect: () => void
-  switchToCelo: () => Promise<void>
-  payUsdmFee: (amountWei: bigint, toAddress: `0x${string}`) => Promise<string>
+  switchToXLayer: () => Promise<void>
+  payStableFee: (amountWei: bigint, toAddress: `0x${string}`) => Promise<string>
   payToTreasury: (priceUsd: number, token: MarketplaceTokenSymbol) => Promise<string>
 }
 
@@ -84,18 +80,16 @@ export const WALLET_BRIDGE_DEFAULT: WalletBridgeValue = {
   address: null,
   isConnected: false,
   chainId: null,
-  isMiniPay: false,
   wrongNetwork: false,
-  celoBalance: '0.00',
+  nativeBalance: '0.00',
   error: null,
   insufficientFunds: false,
-  addCashUrl: null,
   publicClient: null,
   walletClient: null,
   connect: async () => {},
   disconnect: () => {},
-  switchToCelo: async () => {},
-  payUsdmFee: notReady,
+  switchToXLayer: async () => {},
+  payStableFee: notReady,
   payToTreasury: notReady,
 }
 

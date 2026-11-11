@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { REWARD_CONTRACT_ADDRESS, REWARD_ABI } from '@/lib/contract-abi'
 import { getCurrentSeasonId } from '@/lib/web3-client'
-import { pickBestFeeCurrency } from '@/lib/constants/tokens'
-import { getAttributionSuffix } from '@/lib/attribution-tag'
 import { useWallet } from '@/lib/WalletProvider'
 
 export interface SeasonLeaderboard {
@@ -30,7 +28,7 @@ export function useReward(walletAddress: string | undefined) {
   // rather than around it (lib/walletBridge.tsx), so this hook is not inside
   // WagmiProvider and calling usePublicClient()/useWalletClient() here throws
   // WagmiProviderNotFoundError — which is exactly what it did: opening Rewards
-  // in MiniPay died with "a client-side exception has occurred". Both are null
+  // died with "a client-side exception has occurred". Both are null
   // until wagmi has loaded, and every path below already guards on that.
   const { publicClient, walletClient, wrongNetwork } = useWallet()
 
@@ -98,10 +96,10 @@ export function useReward(walletAddress: string | undefined) {
       // `account` is narrower on viem's generic WalletClient than on the one
       // wagmi's useWalletClient() returned, so it is checked here rather than
       // asserted — a client with no account cannot sign anyway.
-      // Same wrong-chain trap as the pass mint: on any chain but Celo the
+      // Same wrong-chain trap as the pass mint: on any chain but X Layer the
       // wallet client is undefined and this used to blame the connection.
       if (wrongNetwork) {
-        throw new Error('Wrong network — NullState runs on Celo. Switch your wallet to Celo and try again.')
+        throw new Error('Wrong network — NullState runs on X Layer. Switch your wallet to X Layer and try again.')
       }
       if (!walletClient?.account || !publicClient) throw new Error('Wallet not connected')
       const account = walletClient.account
@@ -111,15 +109,12 @@ export function useReward(walletAddress: string | undefined) {
 
       try {
         const id = seasonId ?? currentSeason
-        const feeCurrency = await pickBestFeeCurrency(publicClient, account.address)
         const hash = await walletClient.writeContract({
           address: REWARD_CONTRACT_ADDRESS,
           abi: REWARD_ABI,
           functionName: 'claimSeasonBonus',
           args: [id],
           account,
-          feeCurrency,
-          dataSuffix: getAttributionSuffix(),
         })
 
         await publicClient.waitForTransactionReceipt({ hash })

@@ -14,7 +14,7 @@ const TOC = [
 
 export const metadata = {
   title: 'Docs — NULL_STATE',
-  description: 'Documentation for NULL_STATE, a real-time dungeon crawler on Celo.',
+  description: 'Documentation for NULL_STATE, a real-time dungeon crawler on X Layer.',
 }
 
 export default function DocsPage() {
@@ -35,7 +35,7 @@ export default function DocsPage() {
             NULL_STATE
           </h1>
           <p className="text-null-muted text-base leading-relaxed max-w-[560px]">
-            A real-time dungeon crawler on the Celo blockchain, built for MiniPay.
+            A real-time dungeon crawler on the X Layer blockchain.
             This page covers how the game works, what carries real value, and
             what to expect as a player.
           </p>
@@ -76,7 +76,7 @@ export default function DocsPage() {
             <p>
               Most of the run — movement, combat, and looting — happens
               instantly and off-chain, so there is no network fee or wallet prompt
-              for every hit. What settles on Celo are the things that carry
+              for every hit. What settles on X Layer are the things that carry
               real value: your Season Pass, Vault Quest rewards, and Marketplace
               purchases.
             </p>
@@ -203,7 +203,7 @@ export default function DocsPage() {
                 instantly credits NullState Point — an off-chain, in-game
                 currency (not real money, not withdrawable). Spend it on
                 lower-priced Marketplace gear via the Swap button; pricier
-                items still require real USDM, USDC, or USDT.
+                items still require real USDC or USDT.
               </p>
             </div>
             <div>
@@ -215,7 +215,7 @@ export default function DocsPage() {
                 one grants the exclusive Warden outfit, daily perks (bonus
                 energy runs or Glitch Shards, claimable once per day), and
                 eligibility for the seasonal top-3 leaderboard bonus. Its
-                price is payable in USDM, USDC, or USDT.
+                price is payable in USDC or USDT.
               </p>
             </div>
             <div>
@@ -239,25 +239,25 @@ export default function DocsPage() {
           </h2>
           <div className="pl-4 flex flex-col gap-4 text-[15px] leading-relaxed text-null-muted">
             <p>
-              NULL_STATE runs on Celo mainnet. Real-money actions — the
+              NULL_STATE runs on X Layer mainnet. Real-money actions — the
               Season Pass, Vault Quest payouts, and Marketplace purchases —
-              settle as normal Celo transactions. Inventory and run progress
+              settle as normal X Layer transactions. Inventory and run progress
               are stored off-chain for instant, gasless play; NULL_STRIKE is
               free and never touches the chain.
             </p>
             <ul className="flex flex-col gap-2 font-mono text-sm">
               <li>
-                <span className="text-null-green">Network</span> — Celo Mainnet
-                (chain ID 42220)
+                <span className="text-null-green">Network</span> — X Layer Mainnet
+                (chain ID 196)
               </li>
               <li>
-                <span className="text-null-green">Wallet support</span> — MiniPay
-                (auto-connects) and the MetaMask browser extension. WalletConnect,
-                Rainbow, and Coinbase Wallet are not integrated.
+                <span className="text-null-green">Wallet support</span> — any injected
+                browser wallet (auto-connects), including MetaMask and OKX Wallet.
+                WalletConnect, Rainbow, and Coinbase Wallet are not integrated.
               </li>
               <li>
-                <span className="text-null-green">Tokens</span> — USDM (Mento
-                Dollar), USDC, and USDT for Marketplace &amp; Pass; rewards paid in USDT
+                <span className="text-null-green">Tokens</span> — USDC and USDT for
+                Marketplace &amp; Pass; rewards paid in USDT
               </li>
               <li>
                 <span className="text-null-green">License</span> — MIT, source
@@ -279,8 +279,8 @@ export default function DocsPage() {
                 status: 'Live',
                 items: [
                   'Real-time dungeon engine',
-                  'MiniPay native wallet',
-                  'Marketplace (USDM / USDC / USDT)',
+                  'Browser wallet support',
+                  'Marketplace (USDC / USDT)',
                   'Golden Key & Treasure Vault Quest',
                   'Season Pass system',
                   'Monthly leaderboard',
@@ -345,7 +345,7 @@ export default function DocsPage() {
             {[
               {
                 q: 'What does it cost to play?',
-                a: 'Playing, looting, and NULL_STRIKE are all free. A Season Pass (paid in USDM/USDC/USDT) adds the exclusive Warden outfit, daily perks, and top-3 season bonus eligibility, and the Marketplace sells gear for USDM, USDC, or USDT — but nothing is required to play and earn.',
+                a: 'Playing, looting, and NULL_STRIKE are all free. A Season Pass (paid in USDC/USDT) adds the exclusive Warden outfit, daily perks, and top-3 season bonus eligibility, and the Marketplace sells gear for USDC or USDT — but nothing is required to play and earn.',
               },
               {
                 q: 'What happens when my character dies?',
@@ -365,7 +365,7 @@ export default function DocsPage() {
               },
               {
                 q: 'Which wallets are supported?',
-                a: 'MiniPay is supported natively. The MetaMask browser extension also works. WalletConnect, Rainbow, and Coinbase Wallet are not currently integrated.',
+                a: 'Any injected browser wallet works — MetaMask, OKX Wallet, and other in-app browsers auto-connect. WalletConnect, Rainbow, and Coinbase Wallet are not currently integrated.',
               },
             ].map((item) => (
               <div key={item.q}>

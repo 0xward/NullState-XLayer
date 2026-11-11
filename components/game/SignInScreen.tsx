@@ -7,27 +7,24 @@ import { GoogleMark, MailMark, WalletMark } from './SignInMarks'
 import '@/styles/signin.css'
 
 // ─── Save-your-progress screen ───────────────────────────────────────────────
-// Sits between starting a run and SET USERNAME, for players who are not in
-// MiniPay and have no wallet. It exists because until now those players were
+// Sits between starting a run and SET USERNAME, for players who have no
+// wallet and no account. It exists because until now those players were
 // guests forever: progress lived in one browser's localStorage under a random
 // id, so clearing site data — or opening the game on another phone — lost
 // everything.
 //
 // THREE RULES, none of them cosmetic:
 //
-//  1. It is never rendered inside MiniPay. MiniPay's listing requirements are
-//     explicit that connection there is zero-click, and a screen between the
-//     player and the game is exactly the friction they reject. GameFlowManager
-//     owns that check.
+//  1. It is only offered to players with nothing keeping their progress — no
+//     wallet, no account, never declined. GameFlowManager owns that check.
 //
 //  2. Skip is a real option and looks like one. A dismissable prompt that is
 //     hard to dismiss is worse than no prompt. The choice is remembered, so
 //     declining once means declining for good.
 //
-//  3. No button may say "Connect Wallet". check:copy rejects the phrase
-//     anywhere under components/ and app/, because inside MiniPay it is always
-//     the wrong prompt. "I already have a wallet" says the same thing to the
-//     only people who need it.
+//  3. No button may say "Connect Wallet". The wallet auto-connects on load,
+//     so a connect prompt is always the wrong prompt here. "I already have a
+//     wallet" says the same thing to the only people who need it.
 //
 // It is also honest about what an account is NOT. Signing in gives you a name
 // and progress that follow you; it does not give you a wallet, so it cannot buy

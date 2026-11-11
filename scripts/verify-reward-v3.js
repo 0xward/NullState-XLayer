@@ -2,34 +2,42 @@
 'use strict'
 
 /*
- * Verify NullStateRewardV3 on Celoscan (Etherscan V2) — runs in Termux.
+ * Verify NullStateRewardV3 on OKLink (X Layer) — runs in Termux.
  * ====================================================================
  * Submits the exact Standard-JSON-Input the contract was compiled from
  * (scripts/artifacts/NullStateRewardV3.standard-input.json — its bytecode
  * was confirmed byte-identical to the deployed code), so verification is a
  * guaranteed match. No solc, no hardhat — just node's built-in fetch.
  *
- * You need a free API key. Celo is on Etherscan's unified V2 API, so ONE
- * Etherscan key (https://etherscan.io/myapikey) verifies Celo (chainid
- * 42220). A classic Celoscan key + --api-url https://api.celoscan.io/api
- * also works.
+ * OKLink's contract-verification API (docs: https://www.oklink.com/docs/en/):
+ *   POST /api/v5/explorer/contract/verify-source-code
+ *   POST /api/v5/explorer/contract/check-verify-result
+ * with header `Ok-Access-Key: <key>` and a JSON body. You need a free
+ * OKLink key (https://www.oklink.com/ → My account → API management).
+ *
+ * NOTE on the source: scripts/artifacts/*.standard-input.json embeds the
+ * contract source with its comments cleaned for the X Layer move. Comments
+ * do not affect bytecode, so the compiled output is still byte-identical
+ * to the deployed contract and verification still matches.
  *
  * SETUP (Termux)
  *   # in the repo (has scripts/artifacts/*.standard-input.json):
- *   echo 'ETHERSCAN_API_KEY=yourkey' >> scripts/.env
+ *   echo 'OKLINK_API_KEY=yourkey' >> scripts/.env
  *   node scripts/verify-reward-v3.js
  *
  * Flags:
- *   --address 0x..     contract to verify (default: the deployed V3)
- *   --api-url <url>    override endpoint (default Etherscan V2)
- *   --chainid <n>      default 42220 (Celo mainnet)
+ *   --address 0x..     contract to verify (default: the deployed testnet V3)
+ *   --chain XLAYER_TESTNET|XLAYER   default XLAYER_TESTNET (1952); XLAYER is mainnet (196)
+ *   --api-url <url>    override endpoint (default https://www.oklink.com)
+ *
+ * On mainnet there is no deployed V3 yet — --chain XLAYER requires --address.
  */
 
 const fs = require('fs')
 const path = require('path')
 
-const DEPLOYED = '0xec2e7fe57a92ada02c1ab37d9415dad508b7f111' // NullStateRewardV3
-const PASS_SBT = '0x44065B9faf1149FEB4D6Dcdb10d864B2054c7f39' // constructor _passSBT
+const TESTNET_DEPLOYED = '0x50b16bd7edb7b533aaee9457c16c8f3526012eaf' // NullStateRewardV3 on X Layer testnet (1952)
+const TESTNET_PASS_SBT = '0x5e51fe3036ed867053e1625edca3e0c0e96aac94' // constructor _passSBT on testnet
 const COMPILER = 'v0.8.20+commit.a1b79de6'
 const CONTRACT_NAME = 'NullStateRewardV3.sol:NullStateRewardV3'
 const STD_INPUT = path.join(__dirname, 'artifacts', 'NullStateRewardV3.standard-input.json')
@@ -53,68 +61,80 @@ function arg(name, def) {
 }
 
 // ABI-encode the single address constructor arg (32-byte left-padded, no 0x).
-function encodedCtorArgs() {
-  return PASS_SBT.toLowerCase().replace(/^0x/, '').padStart(64, '0')
+function encodedCtorArgs(passSbt) {
+  return passSbt.toLowerCase().replace(/^0x/, '').padStart(64, '0')
 }
 
 async function main() {
   loadEnv()
   if (typeof fetch !== 'function') die('this needs Node 18+ (built-in fetch). Run: node -v')
 
-  const apiKey = process.env.ETHERSCAN_API_KEY || process.env.CELOSCAN_API_KEY
-  if (!apiKey) die('set ETHERSCAN_API_KEY (or CELOSCAN_API_KEY) in scripts/.env — free at https://etherscan.io/myapikey')
+  const apiKey = process.env.OKLINK_API_KEY
+  if (!apiKey) die('set OKLINK_API_KEY in scripts/.env — free at https://www.oklink.com/ (My account → API management)')
   if (!fs.existsSync(STD_INPUT)) die(`missing ${STD_INPUT}`)
 
-  const address = arg('address', DEPLOYED)
-  const chainId = arg('chainid', '42220')
-  const apiUrl = arg('api-url', 'https://api.etherscan.io/v2/api')
+  const chainShortName = arg('chain', 'XLAYER_TESTNET').toUpperCase()
+  if (chainShortName !== 'XLAYER_TESTNET' && chainShortName !== 'XLAYER') {
+    die(`--chain must be XLAYER_TESTNET or XLAYER, got "${chainShortName}"`)
+  }
+  const isTestnet = chainShortName === 'XLAYER_TESTNET'
+  const address = arg('address', isTestnet ? TESTNET_DEPLOYED : null)
+  if (!address) die('no mainnet V3 deployed yet — pass --address 0x.. (or drop --chain XLAYER to verify testnet)')
+  const passSbt = isTestnet ? TESTNET_PASS_SBT : arg('pass-sbt', null)
+  if (!passSbt) die('mainnet verification also needs --pass-sbt 0x.. (the PassSBTv3 constructor arg)')
+  const apiBase = arg('api-url', 'https://www.oklink.com').replace(/\/+$/, '')
+  const explorer = isTestnet ? 'https://www.oklink.com/xlayer-test' : 'https://www.oklink.com/xlayer'
   const sourceCode = fs.readFileSync(STD_INPUT, 'utf8')
 
   console.log(`${C.b}Verify NullStateRewardV3${C.r}`)
   console.log(`  address   ${address}`)
+  console.log(`  chain     ${chainShortName}`)
   console.log(`  compiler  ${COMPILER}`)
-  console.log(`  endpoint  ${apiUrl} (chainid ${chainId})`)
+  console.log(`  endpoint  ${apiBase}/api/v5/explorer/contract/verify-source-code`)
 
-  const submit = new URLSearchParams({
-    chainid: chainId,
-    module: 'contract',
-    action: 'verifysourcecode',
-    apikey: apiKey,
-    codeformat: 'solidity-standard-json-input',
-    sourceCode,
-    contractaddress: address,
-    contractname: CONTRACT_NAME,
-    compilerversion: COMPILER,
-    constructorArguements: encodedCtorArgs(),
-  })
-
-  const res = await fetch(`${apiUrl}?chainid=${chainId}`, {
+  // OKLink's docs do not list a constructor-args field for
+  // solidity-standard-json-input; it is sent anyway (the verifier needs the
+  // args from somewhere, and unknown JSON fields are ignored if unneeded).
+  // If submission is rejected, drop constructorArguements first.
+  const submitRes = await fetch(`${apiBase}/api/v5/explorer/contract/verify-source-code`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: submit,
+    headers: { 'Content-Type': 'application/json', 'Ok-Access-Key': apiKey },
+    body: JSON.stringify({
+      chainShortName,
+      contractAddress: address,
+      contractName: CONTRACT_NAME,
+      sourceCode,
+      codeFormat: 'solidity-standard-json-input',
+      compilerVersion: COMPILER,
+      optimization: '1',
+      optimizationRuns: '200',
+      constructorArguements: encodedCtorArgs(passSbt),
+    }),
   })
-  const j = await res.json().catch(() => ({}))
-  if (String(j.status) !== '1') {
-    if (/already verified/i.test(j.result || '')) { console.log(`${C.grn}✓ already verified${C.r}`); return }
-    die(`submit failed: ${j.result || JSON.stringify(j)}`)
+  const j = await submitRes.json().catch(() => ({}))
+  if (String(j.code) !== '0' || !Array.isArray(j.data) || !j.data[0]) {
+    die(`submit failed: ${j.msg || JSON.stringify(j)}`)
   }
-  const guid = j.result
+  const guid = j.data[0]
   console.log(`  guid      ${guid}\n  ${C.dim}polling status…${C.r}`)
 
   for (let i = 0; i < 20; i++) {
     await sleep(5000)
-    const q = new URLSearchParams({ chainid: chainId, module: 'contract', action: 'checkverifystatus', guid, apikey: apiKey })
-    const r = await fetch(`${apiUrl}?${q.toString()}`)
+    const r = await fetch(`${apiBase}/api/v5/explorer/contract/check-verify-result`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Ok-Access-Key': apiKey },
+      body: JSON.stringify({ chainShortName, guid }),
+    })
     const s = await r.json().catch(() => ({}))
-    const msg = s.result || ''
-    if (/pending/i.test(msg)) { process.stdout.write('.'); continue }
-    if (String(s.status) === '1' || /already verified/i.test(msg)) {
-      console.log(`\n${C.grn}✓ verified${C.r} → https://celoscan.io/address/${address}#code`)
+    const result = Array.isArray(s.data) ? s.data[0] : ''
+    if (/pending/i.test(result || '')) { process.stdout.write('.'); continue }
+    if (result === 'Success') {
+      console.log(`\n${C.grn}✓ verified${C.r} → ${explorer}/address/${address}#code`)
       return
     }
-    die(`\nverification failed: ${msg}`)
+    die(`\nverification failed: ${result || s.msg || JSON.stringify(s)}`)
   }
-  die('timed out waiting for verification status — check Celoscan directly')
+  die('timed out waiting for verification status — check OKLink directly')
 }
 
 main().catch((e) => die(e.message || String(e)))

@@ -4,24 +4,25 @@
  *
  * OWNER, week 202632: he found the Paper, found the Golden Key, entered the
  * right code, and no USDT arrived. He got his reward back only by reading the
- * contract on celoscan himself and working out what had happened. A player
- * cannot do that, and for them the sequence ends at "won, paid nothing".
+ * contract on the block explorer (OKLink) himself and working out what had
+ * happened. A player cannot do that, and for them the sequence ends at
+ * "won, paid nothing".
  *
  * WHAT WAS MEASURED ON CHAIN BEFORE ANY CODE WAS WRITTEN — none of it guessed:
  *
  *   pool balance ................ 0.85 USDT  (the reward is 0.05)  — enough
  *   deposited 1.00 / claimed 0.15 ........................................ — enough
- *   backend signer .............. 0.645 CELO                       — enough gas
+ *   backend signer .............. 0.645 OKB                        — enough gas
  *   isCodeSetForWeek(202632) .... true
  *   simulate submitVaultCode .... does NOT revert
- *   celoscan .................... "Store Weekly Vault Code" SUCCEEDED,
+ *   OKLink explorer ............. "Store Weekly Vault Code" SUCCEEDED,
  *                                 "Submit Vault Code" NEVER BROADCAST AT ALL
  *
  * So: not a revert, not a funding problem, not a permissions problem. The
  * payout transaction never existed. /api/vault/submit was doing TWO sequential
  * on-chain writes in ONE request — store the week's code, then pay — and only
  * for the FIRST winner of any given week, which is why it looked random and
- * survived weeks. Forno is load-balanced, so the node answering the nonce read
+ * survived weeks. The RPC is load-balanced, so the node answering the nonce read
  * for write #2 need not have seen write #1; the transaction was rejected at the
  * RPC boundary before it was a transaction, the route caught it, and the player
  * was told the reward pool needed topping up.
@@ -33,8 +34,8 @@
  * retries; that a failure names a reason it actually CHECKED; and that an
  * unpaid win is collected later by the sweep without the player doing anything.
  *
- * CANNOT: reproduce Forno. There is no Celo node in this sandbox and no
- * backend key, so every client below is a fake whose behaviour I chose. What
+ * CANNOT: reproduce the production RPC. There is no X Layer node in this sandbox
+ * and no backend key, so every client below is a fake whose behaviour I chose. What
  * that means honestly: these tests prove the CODE does the right thing when an
  * RPC misbehaves in the way the chain evidence says it misbehaved. They do not
  * prove that is the only way it misbehaves. The real verification is the next
@@ -83,7 +84,7 @@ function makeChain(opts = {}) {
     claimed: opts.claimed ?? false,
     available: opts.available ?? BigInt(850000),   // 0.85 USDT, 6 decimals
     reward: opts.reward ?? BigInt(50000),          // 0.05 USDT
-    gas: opts.gas ?? BigInt('645000000000000000'), // 0.645 CELO
+    gas: opts.gas ?? BigInt('645000000000000000'), // 0.645 OKB
     nonce: opts.nonce ?? 7,
   }
   const calls = { writes: [], nonceReads: 0, receipts: [] }
@@ -100,7 +101,7 @@ function makeChain(opts = {}) {
       if (functionName === 'hasClaimedThisWeek') return state.claimed
       if (functionName === 'getAvailableVaultFunds') return state.available
       if (functionName === 'vaultReward') return state.reward
-      if (functionName === 'currentRewardToken') return '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e'
+      if (functionName === 'currentRewardToken') return '0x779Ded0c9e1022225f8E0630b35a9b54bE713736' // USDT0 on X Layer
       throw new Error('unstubbed read: ' + functionName)
     },
     async getBalance() { return state.gas },
@@ -215,7 +216,7 @@ async function main() {
     })
     ok('OLD: asks the RPC for a nonce twice', oldChain.calls.nonceReads === 2, String(oldChain.calls.nonceReads))
     ok('OLD: the payout is rejected before it is ever a transaction', oldResult.ok === false, oldResult.detail)
-    ok('OLD: storeWeeklyVaultCode succeeded, submitVaultCode never landed — the exact celoscan trace',
+    ok('OLD: storeWeeklyVaultCode succeeded, submitVaultCode never landed — the exact explorer trace',
       writesOf(oldChain.calls, 'storeWeeklyVaultCode').length === 1
       && writesOf(oldChain.calls, 'submitVaultCode').length === 0)
 
@@ -276,7 +277,7 @@ async function main() {
       /pool/i.test(CHAIN.VAULT_FAILURE_MESSAGE.pool_empty))
   }
   {
-    const { clients, calls } = makeChain({ codeSet: true, gas: BigInt('1000000000000000') }) // 0.001 CELO
+    const { clients, calls } = makeChain({ codeSet: true, gas: BigInt('1000000000000000') }) // 0.001 OKB
     const r = await CHAIN.payVaultWinner({ weekId: WEEK, walletAddress: WALLET, expectedCode: CODE, clients })
     ok('an unfunded signer is named as such, not as an empty pool', r.reason === 'signer_out_of_gas', r.reason)
     ok('and it too writes nothing', calls.writes.length === 0)
@@ -326,7 +327,7 @@ async function main() {
   section('7. FAILS-ON-OLD — an unpaid win is collected without the player')
   // Before the sweep, the ONLY retry was re-opening the vault door: re-enter
   // Bunker 5, clear it, kill the final boss, walk back. The owner recovered his
-  // reward by reading the contract on celoscan. A player cannot.
+  // reward by reading the contract on the block explorer. A player cannot.
   {
     const db = makeDb({
       vaultCodes: { [WEEK]: { code: CODE } },

@@ -1,6 +1,6 @@
 # NullState Documentation
 
-Welcome to **NullState** — a prove-you-exist game on Celo where every move costs real money and every reward is real value.
+Welcome to **NullState** — a prove-you-exist game on X Layer where every move costs real money and every reward is real value.
 
 ## 📚 Documentation Structure
 
@@ -17,7 +17,7 @@ Welcome to **NullState** — a prove-you-exist game on Celo where every move cos
 
 ## 🎮 Quick Start
 
-1. **Connect Wallet** - Link your Celo wallet (MiniPay or MetaMask)
+1. **Connect Wallet** - Link your wallet (MetaMask or any injected wallet)
 2. **Enter the Bunker** - Start at Bunker 1, Floor 1 as the Knight
 3. **Collect Items** - Loot containers for rare treasures
 4. **Burn for Points** - Convert items to NullState Point (spend on gear)
@@ -48,7 +48,7 @@ Welcome to **NullState** — a prove-you-exist game on Celo where every move cos
 
 ## 🛡️ About Us
 
-**NullState** is built on Celo, a mobile-first blockchain. Your data is encrypted and saved securely. Every transaction is real and verifiable on-chain.
+**NullState** is built on X Layer. Your data is encrypted and saved securely. Every transaction is real and verifiable on-chain.
 
 **No progress is ever lost. Your game is your asset.**
 

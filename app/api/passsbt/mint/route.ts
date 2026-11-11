@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeEventLog, parseAbi, getAddress, createWalletClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { celo } from 'viem/chains'
-import { celoTransport } from '@/lib/celoRpc'
+import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
 import { publicClient } from '@/lib/web3-client'
 import { getAdminDb } from '@/firebase-config'
 import { maybeGiftReferralPass } from '@/lib/server/referrals'
 import { MARKETPLACE_TOKENS, TREASURY_WALLET, type MarketplaceTokenSymbol } from '@/lib/constants/marketplace'
 import { parseTokenAmount } from '@/lib/constants/tokens'
 import { PASS_SBT_ADDRESS, PASS_SBT_ABI, getPassPriceUsd } from '@/lib/contract-abi'
-import { getServerAttributionSuffix } from '@/lib/attribution-tag'
 
 // =============================================
 // PASSSBT PAID-MINT VERIFY + BACKEND MINT
@@ -19,12 +17,12 @@ import { getServerAttributionSuffix } from '@/lib/attribution-tag'
 //   - wallet   : buyer address
 //   - txHash   : the ERC20 transfer() tx to the treasury (0.30 USD equiv.)
 //   - seasonId : which season to mint (e.g. 202607)
-//   - token    : 'USDm' | 'USDC' | 'USDT'
+//   - token    : 'USDC' | 'USDT'
 //
 // v2.1 (this session): PassSBTv2's mintPaidPass() used to pull a fixed
-// USDm amount on-chain via transferFrom(). That's gone — instead this
+// amount on-chain via transferFrom(). That's gone — instead this
 // mirrors app/api/marketplace/verify/route.ts exactly: the frontend sends
-// a plain ERC20 transfer() of 0.30 USD (in whichever of USDm/USDC/USDT the
+// a plain ERC20 transfer() of 0.30 USD (in whichever of USDC/USDT the
 // wallet holds most of) to TREASURY_WALLET, this route verifies that
 // transfer really happened on-chain, hasn't been used before, and the
 // season/user state is still valid — then, unlike Marketplace (which just
@@ -196,8 +194,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Backend signer not configured' }, { status: 503 })
     }
     const account = privateKeyToAccount(backendPrivateKey)
-    const transport = celoTransport()
-    const walletClient = createWalletClient({ chain: celo, transport, account })
+    const transport = xlayerTransport()
+    const walletClient = createWalletClient({ chain: xLayerChain, transport, account })
 
     let mintHash: `0x${string}`
     try {
@@ -207,7 +205,6 @@ export async function POST(req: NextRequest) {
         functionName: 'backendMintPass',
         args: [wallet as `0x${string}`, seasonId],
         account,
-        dataSuffix: getServerAttributionSuffix(),
       })
       await publicClient.waitForTransactionReceipt({ hash: mintHash })
     } catch (mintErr: unknown) {

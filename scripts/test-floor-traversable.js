@@ -2,7 +2,7 @@
 /**
  * test-floor-traversable.js — a floor must always be walkable end to end.
  *
- * OWNER BUG, from MiniPay: entered Bunker 1 floor 1 and could not move out of
+ * OWNER BUG: entered Bunker 1 floor 1 and could not move out of
  * the spawn area. This is what found it and what proves it stays fixed.
  *
  * It flood-fills from the spawn point across many generated floors, using the

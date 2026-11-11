@@ -3,7 +3,7 @@
  * and the server-side purchase verifier. Mirrors public/game-engine/
  * marketplace-items.js (the in-canvas engine copy). Owner can append items
  * here + drop the sprite in /public/sprites/marketplace/ — the list is NOT
- * locked. Prices are in USD (paid 1:1 in USDm/USDC/USDT).
+ * locked. Prices are in USD (paid 1:1 in USDC/USDT).
  *
  * Every icon is a 64x64 RGBA PNG in public/sprites/marketplace/. Since v76 the
  * weapon icon art is ALSO the sprite the hero holds (public/sprites/weapons/
@@ -41,7 +41,7 @@ interface MarketplaceItemBase {
   tokenPrice?: number    // NullState Point price (off-chain swap) — only set
                          // for items $0.5–$2 (Phase 5.5 #8). Items without
                          // this field can only be bought with real
-                         // USDm/USDC/USDT, never swapped for tokens.
+                         // USDC/USDT, never swapped for tokens.
   fxTier: 1 | 2 | 3      // drives shop-card glow richness (higher price = flashier)
   sprite: string
   desc: string
@@ -170,18 +170,19 @@ export const TOKEN_SWAP_RATE_PER_USD = 6000
 export const TOKEN_SWAP_MAX_PRICE_USD = 2
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRICING (repriced 2026-07 for the MiniPay listing — owner decision)
+// PRICING (repriced 2026-07 — owner decision)
 //
-// NullState's audience is MiniPay's: West/East Africa, Southeast Asia, Latin
-// America. The old ladder topped out at $15 and averaged ~$6, which is a full
-// day's earnings for a large share of that audience — priced so high that the
-// realistic outcome is nobody buys anything and the economy never starts.
+// NullState's audience is global and largely on budget phones: West/East
+// Africa, Southeast Asia, Latin America. The old ladder topped out at $15
+// and averaged ~$6, which is a full day's earnings for a large share of that
+// audience — priced so high that the realistic outcome is nobody buys
+// anything and the economy never starts.
 //
 // The rules the ladder now follows:
 //   1. $8 is the CEILING. Exactly one item (sunfire_bow, the strongest weapon)
 //      sits there — it is the aspirational purchase, not the expected one.
 //   2. Everything else clusters at $0.50–$3.50, the band where an impulse buy
-//      is actually plausible on a MiniPay balance.
+//      is actually plausible on a player's balance.
 //   3. No gap between adjacent rungs is larger than $1.50, so a player always
 //      has a "just a bit better" step within reach. Gaps are where ladders
 //      lose people.

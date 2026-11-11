@@ -79,19 +79,17 @@ Path: **`vaultCodes/{weekId}`**, value shape:
 Contract: **`TreasureVaultV2.sol`**, function **`setVaultReward(uint256 _newReward)`**
 (`onlyOwner`).
 
-- Units are **smallest-units of the current reward token, and the token's
-  decimals DIFFER**: USDM & CELO are **18-decimal** (1 token = `1e18`), but
-  **USDT and USDC are 6-decimal** (1 token = `1e6`). Always match the amount
+- Units are **smallest-units of the current reward token**: USDC and USDT0
+  are **6-decimal** (1 token = `1e6`). Always match the amount
   to whatever `currentRewardToken` is set to — passing an 18-decimal amount
   for a 6-decimal token overpays by a factor of a trillion.
   - The game pays rewards in **USDT** (6-decimal), so with USDT selected:
     - 1 USDT → `setVaultReward(1000000)` (`1e6`).
     - 5 USDT → `setVaultReward(5000000)` (`5e6`).
     - 0.5 USDT → `setVaultReward(500000)` (`5e5`).
-  - If you ever switch the reward token to USDM (18-decimal): 1 USDM → `1e18`.
 - Related owner-only knobs on the same contract:
   - `setRewardToken(addr)` — pick which supported token pays out
-    (`currentRewardToken`; must be one of USDM/USDT/USDC/CELO). The game
+    (`currentRewardToken`; must be one of USDC/USDT0). The game
     default is **USDT**.
   - `depositVaultPool(token, amount)` — **fund the pool** the payouts come
     from. If the pool is empty, a correct code can't be paid.
@@ -103,7 +101,7 @@ Contract: **`TreasureVaultV2.sol`**, function **`setVaultReward(uint256 _newRewa
 - `BACKEND_PRIVATE_KEY` env on the server = the wallet authorized via
   `setBackendAddress(..., true)`. This wallet signs every `submitVaultCode`.
 - `TREASURE_VAULT_ADDRESS` / ABI in `lib/contract-abi.ts`, RPC via
-  `CELO_RPC_URL` (falls back to `https://forno.celo.org`).
+  `XLAYER_RPC_URL` (falls back to `https://rpc.xlayer.tech`).
 - Firebase Admin credentials (`getAdminDb()` in `firebase-config.ts`) so the
   API routes can read/write the RTDB paths above.
 
@@ -113,12 +111,12 @@ Contract: **`TreasureVaultV2.sol`**, function **`setVaultReward(uint256 _newRewa
 
 An owner CLI that funds/configures both pools without hand-writing wei. It
 signs with the **contract owner (deployer) key**, because every deposit and
-setter is `onlyOwner` — the app cannot do these from a normal MiniPay wallet
+setter is `onlyOwner` — the app cannot do these from a normal player wallet
 unless that wallet is the owner. It reads `owner()` on-chain first and
 refuses to send if your key isn't the owner (fails safe, no wasted gas).
 
-**Why a CLI and not raw Celoscan:** USDT/USDC on Celo are **6-decimal**,
-USDM is 18. Passing `--amount 10` means **$10** and the script scales to the
+**Why a CLI and not the raw explorer:** USDC and USDT0 on X Layer are **6-decimal**.
+Passing `--amount 10` means **$10** and the script scales to the
 right base units, so you can't accidentally send `1e18` USDT ($1 trillion).
 It also warns if `vaultReward` was left in 18-decimal format while the
 payout token is 6-decimal.
@@ -148,26 +146,18 @@ node deposit-reward.js season-deposit --season 3 --token USDT --amount 28
 ```
 
 Other flags: `--fee USDT` (pay gas in a stablecoin if the wallet has no
-CELO), `--dry-run` (simulate, no send), `--yes` (skip the confirm prompt),
+OKB), `--dry-run` (simulate, no send), `--yes` (skip the confirm prompt),
 `--rpc <url>`. Run with no arguments for full help. `vault-withdraw
 --token USDT --amount <n>` pulls unclaimed funds back out.
 
 > Accounting note: the vault tracks one `totalVaultPoolDeposited` counter,
-> not per-token. If you ever deposited USDM then switched to USDT, withdraw
-> the old USDM first so the counter reflects the token you actually pay in.
+> not per-token. If you ever deposited USDC then switched to USDT0, withdraw
+> the old USDC first so the counter reflects the token you actually pay in.
 
-## Season bonus — fixed via `NullStateRewardV3` (redeploy)
+## Season bonus — `NullStateRewardV3`
 
-**Why:** `NullStateRewardV2` capped `seasonId` at 1–6, but PassSBTv3 and the
-app key seasons by **YYYYMM** (e.g. `202607`). So `depositSeasonBonus(202607)`
-reverted, and even at 1–6 the pass check `hasPassForSeason(user, 1..6)` was
-always false (passes live under YYYYMM) — the season bonus was impossible to
-use. V2 isn't upgradeable, so the fix is a redeploy.
-
-`contracts/NullStateRewardV3.sol` is V2 verbatim with only the three
-`_seasonId <= TOTAL_SEASONS` guards relaxed to `_seasonId > 0`, so season ids
-are the same YYYYMM the app already sends. No funds to migrate (V2's season
-pool was never funded; passes live on PassSBTv3).
+`NullStateRewardV3` accepts season ids in **YYYYMM** format (e.g. `202607`),
+the same ids PassSBTv3 and the app already use.
 
 ### Deploy (Termux, no solc needed)
 The contract is pre-compiled to `scripts/artifacts/NullStateRewardV3.json`
@@ -179,23 +169,18 @@ node scripts/deploy-reward-v3.js --dry-run                   # sanity check
 node scripts/deploy-reward-v3.js                             # deploy (deployer becomes owner)
 ```
 Constructor arg is the PassSBTv3 address (auto-filled). The deployer wallet
-needs a little CELO for gas.
+needs a little OKB for gas.
 
-### Verify on Celoscan (Termux)
-Deployed V3: `0xec2e7fe57a92ada02c1ab37d9415dad508b7f111`. The exact
-Standard-JSON-Input it was compiled from is committed at
-`scripts/artifacts/NullStateRewardV3.standard-input.json` (bytecode confirmed
-byte-identical to the deployed code), so verification is a guaranteed match:
+### Verify on the X Layer explorer (Termux)
+Record the deployed address, then verify it on the X Layer explorer
+(`scripts/verify-reward-v3.js`):
 ```
-# free key from https://etherscan.io/myapikey (Etherscan V2 covers Celo)
-echo 'ETHERSCAN_API_KEY=yourkey' >> scripts/.env
 node scripts/verify-reward-v3.js
 ```
 
 ### After deploy
 1. Set `NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS=<new address>` in Vercel, redeploy
-   the app. Send the address back so `lib/contract-abi.ts`'s hardcoded
-   fallback + retired-list can be updated (and the old V2 marked retired).
+   the app, and update `lib/contract-abi.ts`'s hardcoded fallback with the new address.
 2. Set the top-3 bonus amounts (USDT, 6-dec):
    ```
    node scripts/deposit-reward.js season-rewards --token USDT --r1 20 --r2 5 --r3 3

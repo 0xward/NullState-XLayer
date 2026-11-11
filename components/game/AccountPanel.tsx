@@ -36,16 +36,16 @@ interface AccountPanelProps {
 }
 
 export default function AccountPanel({ onChanged, className = '' }: AccountPanelProps) {
-  const { realAddress, isMiniPay, isSignedIn, connect } = useWallet()
+  const { realAddress, isSignedIn, connect } = useWallet()
   const [showSignIn, setShowSignIn] = useState(false)
   const [busy, setBusy] = useState(false)
   const acct = useAccountActions(onChanged)
 
   const label = isSignedIn ? getStoredAuthLabel() : null
 
-  // Inside MiniPay the wallet is the account and there is nothing to offer —
-  // the same rule that keeps the prompt off the way into a run.
-  const canSignIn = !isMiniPay && !realAddress && !isSignedIn
+  // A connected wallet is already the account — there is nothing to offer.
+  // The same rule that keeps the prompt off the way into a run.
+  const canSignIn = !realAddress && !isSignedIn
 
   const doSignOut = async () => {
     setBusy(true)
@@ -63,11 +63,11 @@ export default function AccountPanel({ onChanged, className = '' }: AccountPanel
 
         {canSignIn && (
           <>
-            {/* This line used to end "Open NullState in MiniPay to keep it if
-                you reinstall" — the only advice available before accounts
-                existed, and wrong now that a better one does. It is also the
-                exact sentence where a guest learns their progress is fragile,
-                which makes it the right place to put the way out. */}
+            {/* This line used to tell guests to open the game in a wallet
+                app to keep their progress — the only advice available before
+                accounts existed, and wrong now that a better one does. It is
+                also the exact sentence where a guest learns their progress is
+                fragile, which makes it the right place to put the way out. */}
             <p className="ns-acct-hint">
               Your progress lives on this device only. Clearing site data or
               switching phones loses it.

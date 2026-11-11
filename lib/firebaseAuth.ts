@@ -3,7 +3,7 @@
 // lib/firebase.ts is imported by usernameService, guestMigration, the session
 // service and more — all of which sit on /game's first-load path. Adding
 // getAuth() there would pull the whole Auth SDK into the initial chunk for every
-// player, including the ones inside MiniPay who will never see a sign-in screen
+// player, including the ones who will never see a sign-in screen
 // at all. firebase/auth is a separate entry point from firebase/firestore, so
 // keeping it in a separate module keeps it a separate chunk.
 //

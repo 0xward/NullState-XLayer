@@ -31,8 +31,8 @@ pragma solidity ^0.8.20;
  * yet. This is the exact pattern OpenZeppelin's own ERC721 uses internally
  * for the same non-transferable-token check. See `_update()` below.
  *
- * The same bug exists in `contracts/PassSBT.sol` (v1, live on Celo
- * Mainnet, not upgradeable, not touched by this fix) — meaning v1 most
+ * The same bug exists in `contracts/PassSBT.sol` (v1, not upgradeable,
+ * not touched by this fix) — meaning v1 most
  * likely never successfully minted a single pass either. Neither v1 nor
  * v2 use a proxy/upgradeable pattern, so this cannot be patched in place;
  * a new contract is the only fix, hence v3.

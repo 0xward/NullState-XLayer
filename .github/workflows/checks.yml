@@ -102,20 +102,6 @@ jobs:
       - name: Every reference resolves
         run: npm run audit
 
-      # MiniPay's listing review rejects Mini Apps over wording, and wording is
-      # invisible to every other check here — a build, a type-check and an asset
-      # audit all pass happily on a "Connect wallet" prompt or an "Add Cash"
-      # button label. Both had already shipped.
-      - name: MiniPay copy rules
-        run: npm run check:copy
-
-      # An untagged Celo transaction is unattributed FOREVER — the ERC-8021
-      # suffix cannot be backfilled. Nothing else notices: the tx succeeds
-      # either way, dataSuffix is an optional param, and the loss is only
-      # visible on a dashboard nobody checks per-PR.
-      - name: Celo attribution tags
-        run: npm run check:attribution
-
       # A stylesheet that uses a token another (lazily-loaded) sheet declares
       # produces no error and no visible fallback — an undefined var() resolves
       # to nothing, which for `background` is transparent. That is how a primary

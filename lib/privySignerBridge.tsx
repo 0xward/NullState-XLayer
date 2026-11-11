@@ -2,7 +2,11 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import type { Account, Transport, WalletClient } from 'viem'
-import type { Chain as CeloChain } from 'viem'
+
+// The X Layer chain TYPE, not the value — same erased-`typeof import(...)`
+// pattern as lib/walletBridge.tsx, so viem stays out of this module's
+// runtime graph.
+type XLayerChain = typeof import('./xlayerRpc').xLayerChain
 
 // ─── The Privy signer, published rather than wrapped ─────────────────────────
 //
@@ -11,9 +15,9 @@ import type { Chain as CeloChain } from 'viem'
 //
 // The obvious way to do that is what Chessify does — wrap the whole app in
 // PrivyProvider (see src/app/providers.tsx in jadonamite/playchessify). We
-// cannot: that ships the Privy SDK to every MiniPay player, for a screen they
-// are never shown, on the connections least able to afford the download. It is
-// the same reason lib/walletBridge.tsx exists for wagmi.
+// cannot: that ships the Privy SDK to every player on every route, for a
+// screen most of them are never shown, on the connections least able to afford
+// the download. It is the same reason lib/walletBridge.tsx exists for wagmi.
 //
 // So this is walletBridge's shape again, one layer over: a context that is
 // ALWAYS mounted and costs nothing (no Privy import anywhere in this file), and
@@ -34,12 +38,17 @@ import type { Chain as CeloChain } from 'viem'
 // ── AND WHY THERE IS NO SMART WALLET HERE ───────────────────────────────────
 //
 // Chessify pairs Privy with ERC-4337 and a Pimlico bundler so social players
-// never need gas. On Celo that is a solution to a problem the chain already
-// solved: CIP-64 lets gas be paid in a stablecoin, and this app already does it
-// (pickBestFeeCurrency in lib/constants/tokens.ts). A player holding only USDT
-// can pay for a $1 item with no CELO, no bundler, no sponsor, and no extra
-// service to keep funded. Owner's call: *"lanjut pakai CIP-64 aja, jangan smart
-// wallet."*
+// never need gas. This app does not: gas is paid in OKB, the native token,
+// and the player keeps a small OKB balance for it. A player holding only USDT
+// still needs that OKB — the shop says so when the balance is short, rather
+// than hiding it behind a sponsor. Owner's call: no smart wallet, no bundler,
+// no extra service to keep funded.
+
+/** The Privy app id, or null when it is not configured. */
+export function privyAppId(): string | null {
+  const id = process.env.NEXT_PUBLIC_PRIVY_APP_ID
+  return typeof id === 'string' && id.trim() ? id.trim() : null
+}
 
 export interface PrivySignerValue {
   /** True once the island has mounted and Privy has settled. */
@@ -49,8 +58,8 @@ export interface PrivySignerValue {
    * only address here that can sign. Null when the player has no Privy wallet.
    */
   address: `0x${string}` | null
-  /** Signing client for that wallet, pinned to Celo. Null until it exists. */
-  walletClient: WalletClient<Transport, CeloChain, Account> | null
+  /** Signing client for that wallet, pinned to X Layer. Null until it exists. */
+  walletClient: WalletClient<Transport, XLayerChain, Account> | null
   /**
    * Send `priceUsd` of a stablecoin to the treasury from the embedded wallet.
    *
@@ -58,11 +67,11 @@ export interface PrivySignerValue {
    * not care which wallet is paying. Implemented inside the LAZY island rather
    * than here on purpose: doing the encoding in this file would pull viem into
    * the main bundle, which is the exact cost lib/WagmiIsland.tsx exists to
-   * avoid — and a MiniPay player must not pay for a code path they can never
-   * reach.
+   * avoid — and a player who never signs in with Google must not pay for a
+   * code path they can never reach.
    *
-   * Gas is paid in the same stablecoin (CIP-64), so a player holding only USDT
-   * needs no CELO. That is why this needs no smart wallet and no sponsor.
+   * Gas is paid in OKB, the native token, so the embedded wallet needs a
+   * small OKB balance to spend — same as any other wallet here.
    */
   payToTreasury: ((priceUsd: number, token: string) => Promise<string>) | null
 }

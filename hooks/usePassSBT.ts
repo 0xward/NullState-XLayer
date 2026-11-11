@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { pickBestFeeCurrency, pickBestPaymentToken, type MarketplaceTokenSymbol } from '@/lib/constants/tokens'
+import { pickBestPaymentToken, type MarketplaceTokenSymbol } from '@/lib/constants/tokens'
 import { useWallet } from '@/lib/WalletProvider'
-import { getUserFriendlyError, MINIPAY_ADD_CASH_URL } from '@/lib/errorUtils'
 import {
   PASS_SBT_ADDRESS,
   PASS_SBT_ABI,
@@ -36,8 +35,8 @@ export function usePassSBT(walletAddress: string | undefined) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Set only when a mint fails specifically due to a token-balance
-  // shortfall (native gas OR every stablecoin) — lets the UI offer a
-  // MiniPay "Add Cash" shortcut instead of just showing red text.
+  // shortfall (native gas OR every stablecoin) — lets the UI say so
+  // instead of just showing red text.
   const [insufficientFunds, setInsufficientFunds] = useState(false)
   // Fine-grained phase for the paid-mint flow: paying (treasury transfer)
   // is a separate tx from the backend's mint call, so a single isLoading
@@ -132,8 +131,8 @@ export function usePassSBT(walletAddress: string | undefined) {
   )
 
   // v2.1 flexible-payment paid-mint flow, replacing the old
-  // approve()+mintPaidPass() USDm-only path:
-  //   1. detect which of USDm/USDC/USDT the wallet holds the most of
+  // approve()+mintPaidPass() single-token path:
+  //   1. detect which of USDC/USDT the wallet holds the most of
   //   2. send 0.30 USD equivalent of that token to TREASURY_WALLET (plain
   //      transfer(), same as Marketplace purchases)
   //   3. POST the tx hash to /api/passsbt/mint, which verifies the payment
@@ -146,12 +145,12 @@ export function usePassSBT(walletAddress: string | undefined) {
   const mintPaidPassFlexible = useCallback(
     async (seasonId: bigint): Promise<{ success: boolean; mintTxHash: `0x${string}` }> => {
       // The message the owner actually hit in the OKX browser. walletClient is
-      // undefined on any chain but Celo — wagmi's getConnectorClient throws
+      // undefined on any chain but X Layer — wagmi's getConnectorClient throws
       // ConnectorChainMismatchError, useWalletClient swallows it into
       // `data: undefined` — so "not connected" was reported to someone whose
       // wallet was connected and one tap from working. Name the real problem.
       if (wrongNetwork) {
-        throw new Error('Wrong network — NullState runs on Celo. Switch your wallet to Celo and try again.')
+        throw new Error('Wrong network — NullState runs on X Layer. Switch your wallet to X Layer and try again.')
       }
       if (!walletClient || !publicClient || !walletClient.account) {
         throw new Error('Wallet not connected')
@@ -232,7 +231,6 @@ export function usePassSBT(walletAddress: string | undefined) {
     isLoading,
     error,
     insufficientFunds,
-    addCashUrl: insufficientFunds ? MINIPAY_ADD_CASH_URL : null,
     mintTxPhase,
     payingToken,
     passPriceUsd,

@@ -1,4 +1,4 @@
-// MiniPay listing compliance (v75): raw wallet addresses must never be
+// Privacy rule (v75): raw wallet addresses must never be
 // shown in the UI. Every user-facing address goes through this mask:
 // keep the "0x" prefix, censor the middle, show only the LAST 5 hex
 // characters — e.g. 0x71C7...9aF23 renders as "0x....9aF23".

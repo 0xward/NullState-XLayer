@@ -5,6 +5,8 @@ import { GiBroadsword, GiLightningTrio, GiPotionBall, GiPadlock } from 'react-ic
 import { attachLiveStatsBridge, subscribeLiveStats } from '@/lib/liveStatsBridge'
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@/lib/WalletProvider'
+import { useTapeOut } from '@/hooks/useTapeOut'
+import { maskAddress } from '@/lib/addressMask'
 import { PlayerProfile } from '@/lib/contract'
 import { loadGameSession, saveGameSession, clearGameSession, saveGameSessionDraft, clearGameSessionDraft } from '@/lib/gameSessionService'
 import { pickBestPaymentToken, type MarketplaceTokenSymbol } from '@/lib/constants/tokens'
@@ -25,7 +27,7 @@ import '@/styles/dungeon.css'
 // DEPTHS) ported into the Next.js app. The proven vanilla-JS engine lives in
 // /public/game-engine/* and exposes window.NullStateGame.{mount,unmount}. The
 // engine's on-chain NULL_STRIKE is bridged to the existing wagmi wallet so the
-// whole app uses ONE wallet system (RainbowKit / MiniPay / MetaMask on Celo).
+// whole app uses ONE wallet system (wagmi / injected wallet on X Layer).
 // ─────────────────────────────────────────────────────────────────────────────
 
 // The cache-busting build tag moved to lib/engineScript.ts along with the rest
@@ -178,6 +180,26 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
   useEffect(() => {
     ;(window as unknown as { NS_DROPBUFF_UNTIL?: number }).NS_DROPBUFF_UNTIL = elixir.activeUntil
   }, [elixir.activeUntil])
+  // TapeOut (X Layer, read-only): the Sealed Vault door shows the live
+  // on-chain reference circuit (TapeID 3.2.101) — its owner is read from
+  // the chain when this screen mounts and refreshed every minute. No
+  // wallet, no transaction; the line degrades to a plain note if the
+  // public RPC is unreachable. The vault window itself is engine-driven
+  // DOM, so this writes into #vaultTapeOut by id (the node is React JSX,
+  // always in the DOM, just hidden with the overlay — game.js never
+  // touches it).
+  const tapeOut = useTapeOut()
+  useEffect(() => {
+    const el = document.getElementById('vaultTapeOut')
+    if (!el) return
+    if (tapeOut.data) {
+      el.textContent = `Sealed by TapeOut circuit ${tapeOut.data.referenceCircuit.tapeId} · owner ${maskAddress(tapeOut.data.referenceCircuit.owner)} · verified on X Layer`
+    } else if (tapeOut.error) {
+      el.textContent = 'TapeOut circuit check unavailable — the vault code itself is unaffected.'
+    } else {
+      el.textContent = 'Checking the TapeOut circuit on X Layer…'
+    }
+  }, [tapeOut.data, tapeOut.error])
 
   const isDevWallet =
     !!wallet.address &&
@@ -188,18 +210,18 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
   /**
    * Which stablecoin to charge this wallet in.
    *
-   * Both dollar purchases in this file used to hardcode 'USDm'. Every other
+   * Both dollar purchases in this file used to hardcode one token. Every other
    * paid flow — Marketplace, Crafting, blueprints, shard packs — asks
-   * pickBestPaymentToken which of USDm/USDC/USDT the wallet actually holds the
-   * most of, which is also MiniPay's "Dynamic Adaptation" requirement.
+   * pickBestPaymentToken which of USDC/USDT the wallet actually holds the
+   * most of.
    *
-   * Hardcoding it meant a wallet holding USDC but no USDm sent a transfer that
+   * Hardcoding it meant a wallet holding USDT but no USDC sent a transfer that
    * moved nothing, and the server then correctly reported "No matching payment
    * to treasury found in this tx". Owner hit exactly that on elixir in the OKX
    * browser, with every other purchase working — because every other purchase
    * asked first.
    *
-   * Falls back to USDm on any read failure, which is what pickBestPaymentToken
+   * Falls back to USDC on any read failure, which is what pickBestPaymentToken
    * itself does, so a flaky RPC degrades to the old behaviour rather than
    * blocking the sale.
    */
@@ -207,7 +229,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
     try {
       return await pickBestPaymentToken(walletRef.current.publicClient, addr as `0x${string}`)
     } catch {
-      return 'USDm'
+      return 'USDC'
     }
   }
 
@@ -219,7 +241,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
     setEnergyMsg(isDevWallet ? 'DEV: requesting free refill…' : 'Sending $1…')
     try {
       let txHash = ''
-      let token: MarketplaceTokenSymbol = 'USDm'
+      let token: MarketplaceTokenSymbol = 'USDC'
       if (!isDevWallet) {
         token = await bestToken(addr)
         txHash = await walletRef.current.buyMarketplaceItem(1, token)
@@ -264,7 +286,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
     setElixirMsg(isDevWallet ? 'DEV: requesting free elixir…' : 'Sending $1…')
     try {
       let txHash = ''
-      let token: MarketplaceTokenSymbol = 'USDm'
+      let token: MarketplaceTokenSymbol = 'USDC'
       if (!isDevWallet) {
         token = await bestToken(addr)
         txHash = await walletRef.current.buyMarketplaceItem(1, token)
@@ -474,7 +496,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
       // These rely on native touch scrolling/dragging — the Settings modal
       // (scrollable panel + the volume <input type="range"> slider) was
       // missing here, which is why on touch browsers (mobile Chrome, and
-      // especially in-app browsers like OKX Wallet / MiniPay that route ALL
+      // especially in-app browsers like OKX Wallet that route ALL
       // touchmove through this same global listener) the settings popup
       // couldn't be scrolled and the volume slider felt stuck/janky: every
       // touchmove on top of it was being preventDefault()-ed before the
@@ -532,7 +554,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
           // show up in the dungeon's Inventory/Gear tab until the player
           // happened to open the Marketplace screen first. Equipped slots
           // are persisted server-side (Firebase, per wallet — see
-          // /api/marketplace/equip) precisely so they survive a MiniPay
+          // /api/marketplace/equip) precisely so they survive an
           // uninstall/reinstall the same way owned items already do; the
           // localStorage copy here is just an instant-read cache of that.
           // Best-effort: if this fails (offline, etc.) whatever's already
@@ -807,7 +829,7 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     // pagehide/beforeunload are the teardown backstops for an accidental
-    // refresh (pull-to-refresh, reload in OKX/MiniPay's in-app browser) that
+    // refresh (pull-to-refresh, reload in OKX's in-app browser) that
     // would otherwise tear the page down before a write reaches the network.
     // The localStorage draft (written on every meaningful change above) is the
     // true belt-and-suspenders here — even if these flushes are cut off, the
@@ -1339,6 +1361,10 @@ export default function DungeonGame({ playerProfile, setPlayerUsername, isNewRun
           <div className="vault-inner">
             <div className="vault-title">SEALED VAULT DOOR</div>
             <div className="vault-sub">Enter the 4-digit code from this week&apos;s Paper.</div>
+            {/* TapeOut seal line — filled by the useTapeOut effect in this
+                component (live on-chain circuit read). Static placeholder
+                text until the first read lands. */}
+            <div id="vaultTapeOut" className="vault-tapeout">Checking the TapeOut circuit on X Layer…</div>
             {/* Filled by refreshVaultRequirements() on every open: which of the
                 two weekly items the wallet actually holds, and what to do when
                 one is missing. Without it the screen was a blank code box with

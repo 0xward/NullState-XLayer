@@ -23,16 +23,15 @@
  * two taps away — and if one ever were, useWallet()'s pay actions throw rather
  * than silently doing nothing.
  *
- * MiniPay requirement (unchanged): no manual connect button — connection is
- * silent on load. Only the injected connector is registered.
+ * No manual connect button anywhere in the UI — connection is silent on
+ * load. Only the injected connector is registered.
  */
 
 import { ReactNode, useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import WalletProvider from '@/lib/WalletProvider'
 import { WalletBridgeProvider } from '@/lib/walletBridge'
-import { PrivySignerBridgeProvider } from '@/lib/privySignerBridge'
-import { readPrivyGateFlag } from '@/lib/privyGateFlag'
+import { PrivySignerBridgeProvider, privyAppId } from '@/lib/privySignerBridge'
 
 // ssr:false because a wallet cannot exist on the server; it is also what keeps
 // the wagmi chunk out of the server-rendered payload entirely.
@@ -44,14 +43,13 @@ const WagmiIsland = dynamic(() => import('@/lib/WagmiIsland'), { ssr: false })
 // the same reason: mounting a provider around the tree later would remount
 // every child and lose their state.
 //
-// Loaded ONLY when readPrivyGateFlag() says yes, which is false inside MiniPay,
-// false with no app id, and false by default. So a MiniPay player downloads
-// none of this, which is the whole reason the app does not simply wrap itself
-// in PrivyProvider the way Chessify does.
+// Loaded only when a Privy app id is configured. With no app id there is no
+// Privy session to restore and no embedded wallet to keep alive, so nothing
+// is downloaded at all.
 //
 // It renders no UI. Its only job is to keep a Privy signer alive for the rest
 // of the session, so a player who signed in with Google an hour ago can still
-// pay at the shop — the gate screen itself is short-lived and cannot hold it.
+// pay at the shop.
 const PrivySignerIsland = dynamic(() => import('@/components/game/PrivySignerIsland'), { ssr: false })
 
 const IDLE_CEILING_MS = 1500
@@ -81,9 +79,10 @@ function DeferredWagmi() {
 function DeferredPrivySigner() {
   const [mount, setMount] = useState(false)
   useEffect(() => {
-    // Read in an effect, not during render: the flag consults window.ethereum
-    // and the query string, and /game is prerendered.
-    if (readPrivyGateFlag()) setMount(true)
+    // Read in an effect, not during render: /game is prerendered, and the
+    // app id is an env var compiled into the bundle — the check itself is
+    // synchronous, but mounting a provider during render is not.
+    if (privyAppId()) setMount(true)
   }, [])
   return mount ? <PrivySignerIsland /> : null
 }

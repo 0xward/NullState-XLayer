@@ -34,7 +34,7 @@ pass history (expired passes stay in your wallet as collectibles)
 
 ### With Pass 🌟
 - Price is set **on-chain** (`PassSBTv3.passPriceUsdCents`) and shown live
-  on the Season Pass screen; payable in USDM, USDC, or USDT.
+  on the Season Pass screen; payable in USDC or USDT0.
 - Grants the perks listed above for that season only.
 
 ### Without Pass (Free) 🆓

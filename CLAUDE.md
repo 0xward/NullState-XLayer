@@ -2,8 +2,7 @@
 
 Guidance for Claude Code (and any AI assistant) working in this repository.
 
-NULL_STATE is a real-time, top-down dungeon crawler on Celo, built to run inside
-MiniPay. Playing is free; only Marketplace/Season Pass purchases settle on-chain,
+NULL_STATE is a real-time, top-down dungeon crawler on X Layer. Playing is free; only Marketplace/Season Pass purchases settle on-chain,
 and USDT rewards are paid out from the Treasure Vault, Leaderboard and Season
 Pass. Next.js 14 App Router + React 18 + TypeScript on the outside, a vanilla
 Canvas2D engine on the inside.
@@ -69,8 +68,7 @@ comment of a script before changing it; it explains the failure it exists for.
 |---|---|
 | `npm run check:market` | the two marketplace price lists agreeing |
 | `npm run audit` | every asset/sprite/script path resolving to a real file |
-| `npm run check:copy` | MiniPay's copy rules (banned words, connect prompts, signing) |
-| `npm run check:attribution` | every Celo tx carrying its ERC-8021 tag |
+| `npm run check:copy` | player-facing copy rules (banned words, connect prompts, signing) |
 | `npm run check:cssvars` | no stylesheet using a `var(--x)` another sheet declares |
 | `npm run build:icons` / `build:weapons` | generated art matching its masters |
 
@@ -91,7 +89,7 @@ touches the engine goes out.
 
 ### What CI runs
 
-`.github/workflows/checks.yml` on every PR: `npm ci`, the six consistency checks
+`.github/workflows/checks.yml` on every PR: `npm ci`, the five consistency checks
 above, `node --check` over engine sources and minified output, and `npx tsc
 --noEmit`. It deliberately does **not** run `next build` (Vercel already does)
 and deliberately does **not** run `npm run lint` — the repo carries ~20 files of
@@ -126,7 +124,7 @@ lib/
                         vaultChain (all on-chain vault work), vaultSweep…
   WagmiIsland.tsx       wagmi/viem, mounted as a deferred SIBLING (see §5)
   WalletProvider.tsx    useWallet() — the identity surface
-  celoRpc.ts            the ONLY place a Celo endpoint may be named
+  xlayerRpc.ts         the ONLY place an X Layer endpoint may be named
   siteUrl.ts            the ONLY place the canonical origin may be named
 hooks/                  usePassSBT, useReward, useVault (wagmi-backed contract hooks)
 contracts/              PassSBTv3.sol, NullStateRewardV3.sol, TreasureVaultV2.sol
@@ -134,7 +132,7 @@ public/game-engine/     THE GAME (see §1)
 public/sprites/         LPC-derived character/monster/weapon sheets
 styles/                 globals.css (always loaded) + per-route sheets
 scripts/                verification + asset-generation scripts (see §2)
-docs/                   design and operations docs (see §8)
+docs/                   design and operations docs (see §7)
 __tests__/              two legacy unit tests; new coverage goes in scripts/
 ```
 
@@ -154,33 +152,23 @@ Breaking one of these is how the game drifted the first time.
 4. **Never make a real reward reachable only by luck.** Luck may accelerate it;
    effort must guarantee it.
 5. **Sessions stay short.** If a change makes the minimum useful session longer
-   than ~5 minutes, it is wrong for MiniPay.
+   than ~5 minutes, it is wrong for this game.
 6. **Content does not fix a missing loop.** More bunkers/monsters/weapons will
    not answer "why come back tomorrow."
 7. **Update `docs/GAME-DESIGN.md` in the same PR.** Flip `[TARGET]` → `[TODAY]`
    when you ship it.
 
-Two more that the tooling enforces:
+One more that the tooling enforces:
 
-8. **Single-source config.** `lib/celoRpc.ts` owns RPC endpoints, `lib/siteUrl.ts`
+8. **Single-source config.** `lib/xlayerRpc.ts` owns RPC endpoints, `lib/siteUrl.ts`
    owns the origin. `npm run audit` fails if any other file names an endpoint —
    they used to disagree, and the knob only half-worked.
-9. **Every Celo transaction carries its ERC-8021 attribution tag** — via
-   `dataSuffix:` or `withAttribution()` on `data`. This *cannot be backfilled*;
-   an untagged tx is unattributed forever. `npm run check:attribution` gates it,
-   and this includes the four transactions the **backend** signs.
-
----
-
 ## 5. Web3 and wallet conventions
 
-- **Chain:** Celo Mainnet (`42220`). Tokens: Mento USDM, USDC, USDT — mixed 6-
-  and 18-decimal, always go through `parseTokenAmount` in `lib/constants/tokens.ts`.
-- **Connectors:** injected only. MiniPay auto-connects silently; MetaMask
-  extension works. WalletConnect / Coinbase / Rainbow are **not** integrated and
+- **Chain:** X Layer Mainnet (`196`; testnet `1952`). Tokens: USDC and USDT0 — both 6-decimal, always go through `parseTokenAmount` in `lib/constants/tokens.ts`.
+- **Connectors:** injected only. MetaMask extension and any injected wallet work. WalletConnect / Coinbase / Rainbow are **not** integrated and
   the relay was deliberately removed — do not reintroduce them.
-- **No `personal_sign` / `eth_signTypedData`.** MiniPay does not support message
-  signing at all; a call is a hard failure on a real device. `check:copy` enforces it.
+- **Do not require message signing for reward flows.** Players who sign in with Google or as guests have no key to sign with, so a `personal_sign` / `eth_signTypedData` gate locks them out. Keep reward-bearing flows signature-free (see `docs/SEC-1-reward-endpoints.md`).
 - **wagmi loads late, and as a sibling.** `lib/Web3Providers.tsx` renders children
   immediately behind a dependency-free bridge, then mounts `WagmiIsland` beside
   them on idle (1500 ms ceiling). The obvious `ready ? <WagmiProvider>{children}`
@@ -199,8 +187,7 @@ Two more that the tooling enforces:
   unguessability of an address.
 - **Feature flags** live in one file each and are read by every consumer:
   `lib/worldMapHubFlag.ts` (default **on**; `NEXT_PUBLIC_WORLDMAP_HUB=0` reverts
-  to the classic menu) and `lib/privyGateFlag.ts` (default **off**, never inside
-  MiniPay, requires an app id; temporary scaffolding for talent.app judging).
+  to the classic menu) and `lib/privyGateFlag.ts` (default **off**, requires an app id; temporary scaffolding for talent.app judging).
 
 ---
 
@@ -229,7 +216,7 @@ Two more that the tooling enforces:
   assert it for every transaction in their modules.
 - **Never put two on-chain writes in one player request.** A vault payout did —
   store the week's code, then pay — and only for the *first* winner of each
-  week, so it looked random and survived weeks. Forno is load-balanced, so the
+  week, so it looked random and survived weeks. The public RPC is load-balanced, so the
   node answering the nonce read for the second write need not have seen the
   first; the transaction was rejected at the RPC boundary before it was ever a
   transaction, and the player was told the reward pool was empty. Do the
@@ -249,27 +236,7 @@ Two more that the tooling enforces:
 
 ---
 
-## 7. MiniPay listing rules that live in code
-
-These are not style preferences — the listing review rejects the app over them.
-
-- **Banned player-facing words:** "gas" → *network fee*, "onramp"/"offramp" →
-  *deposit*/*withdraw*, "crypto" → *stablecoin*, and no "Add Cash" button label.
-  Code identifiers, comments and `eth_gasPrice` are fine; `check:copy` only reads
-  text a user can see.
-- **No "Connect wallet" copy and no connect button.** Inside MiniPay the address
-  resolves with zero interaction, so a connect prompt is always wrong. No gate
-  screen may appear between a MiniPay player and the game — not even for a frame.
-- **`.npmrc` is a listing requirement:** `minimum-release-age=10080` (reject
-  dependency versions published in the last 7 days) and `ignore-scripts=true`.
-  Do not remove either; install with `npm ci`/`npm install` as-is.
-- Load speed is graded on real-user p75, which is why the code-splitting in §5
-  and the "no preconnects" note in `app/layout.tsx` exist. Both were measured.
-  Read the comments before undoing either.
-
----
-
-## 8. Documentation map
+## 7. Documentation map
 
 `docs/GAME-DESIGN.md` is the source of truth for what the game *is* — read it
 before changing any loop or economy value. It carries `[TODAY]`/`[TARGET]`
@@ -281,10 +248,7 @@ status markers, a decision log, and the invariants in §4.
 | `docs/game-mechanics.md`, `docs/faq.md` | player-facing rules |
 | `docs/rewards-system.md`, `docs/leaderboard.md`, `docs/pass-system.md` | economy |
 | `docs/TREASURY-OPS.md`, `docs/OWNER-RUNBOOK.md` | operating the treasury, deposit log |
-| `docs/network-manifest.md` | every external endpoint the app talks to |
-| `ARCHITECTURE_HYBRID.md`, `NULLSTATE_WEB3_ARCHITECTURE.md` | system architecture |
-| `MINIPAY-COMPLIANCE-CHECKLIST.md` | the full listing checklist |
-| `DEPLOYMENT.md`, `FIREBASE_SETUP.md`, `SEASONS_CONFIGURATION.md` | ops setup |
+| `DEPLOYMENT.md`, `FIREBASE_SETUP.md` | ops setup |
 
 Player-visible numbers appear in `docs/` **and** in the app's How to Play screen.
 If you change an economy value, change both — wrong numbers reaching the docs is
@@ -292,7 +256,7 @@ the specific failure invariant #2 was written for.
 
 ---
 
-## 9. House style
+## 8. House style
 
 **Comments explain the failure, not the code.** This repo's defining convention
 is that non-obvious code carries a header comment naming the bug it exists for,
@@ -306,7 +270,7 @@ in the player's or owner's terms, not a conventional-commits prefix:
 
 ```
 The season score punished the players who had been here longest (#233)
-A Google player can pay, and no MiniPay player pays for it (#232)
+A Google player can pay, and no wallet player pays for it (#232)
 The half second of map that should not have been there (#226)
 ```
 
@@ -321,12 +285,12 @@ Match this. Run the relevant checks and report the real numbers.
 - Client components need `'use client'`; the wallet layer depends on precise
   client/server boundaries.
 - Server-only env vars must never gain a `NEXT_PUBLIC_` prefix
-  (`POSTHOG_PERSONAL_API_KEY`, `CELO_RPC_URL`, `BACKEND_PRIVATE_KEY`,
+  (`POSTHOG_PERSONAL_API_KEY`, `XLAYER_RPC_URL`, `BACKEND_PRIVATE_KEY`,
   `FIREBASE_SERVICE_ACCOUNT`, `DEV_TEST_WALLETS`).
 
 ---
 
-## 10. Environment
+## 9. Environment
 
 Required for a functioning backend (not in `.env.example`, which documents only
 the optional knobs):
@@ -343,9 +307,9 @@ that, and warns and disables Admin rather than throwing when it is absent.
 
 `.env.example` documents everything else with the reasoning for each, and all of
 it is inert when unset: PostHog (Web Vitals reporting and the `/stats` speed
-card), `NEXT_PUBLIC_CELO_RPC` / `CELO_RPC_URL` (defaults to Forno with a viem
+card), `NEXT_PUBLIC_XLAYER_RPC` / `XLAYER_RPC_URL` (defaults to https://rpc.xlayer.tech with a viem
 `fallback()` chain), `NEXT_PUBLIC_SITE_URL`,
-`NEXT_PUBLIC_CELO_ATTRIBUTION_CODE`, the feature flags in §5, and two plain
+the feature flags in §5, and two plain
 random strings that are not keys and cannot spend anything — `CRON_SECRET`
 (authenticates Vercel's call to `/api/cron/season`) and `ADMIN_SECRET` (sent as
 `x-admin-secret` to mark a season paid; it only sets a flag).
@@ -359,7 +323,7 @@ only need overriding for a redeploy.
 
 ---
 
-## 11. Session notes
+## 10. Session notes
 
 - `.claude/hooks/session-start.sh` runs on session start: sets the repo-local git
   identity (commits are the owner's; Claude stays on the `Co-Authored-By`

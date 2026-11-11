@@ -15,7 +15,7 @@
  * Three things this holds to, because the player has no other way to learn any
  * of them:
  *   1. HOW MUCH, and in what — the largest text on the screen;
- *   2. that it is ALREADY SENT and needs no claim — the MiniPay failure mode is
+ *   2. that it is ALREADY SENT and needs no claim — the failure mode is
  *      a player hunting for a claim button that does not exist and concluding
  *      they were not paid;
  *   3. that nothing takes it away on a timer.
@@ -113,11 +113,11 @@ async function openWith(page, payload) {
   ok('the AMOUNT is shown (' + paid.amount + ')', /0\.5/.test(paid.amount))
   ok('and the currency, by name', /USDT/.test(paid.amount))
   ok('it says the money is already sent', /sent/i.test(paid.note), paid.note.slice(0, 60))
-  ok('and that NO CLAIM is needed — the MiniPay failure mode',
+  ok('and that NO CLAIM is needed',
     /no claim/i.test(paid.note))
   ok('it warns the wallet may take a moment, so a delay is not read as a loss',
     /few seconds|moment/i.test(paid.note))
-  ok('the transaction is linkable', paid.txShown && /celoscan\.io\/tx\/0xabc123/.test(paid.txHref || ''), paid.txHref)
+  ok('the transaction is linkable', paid.txShown && /oklink\.com\/xlayer\/tx\/0xabc123/.test(paid.txHref || ''), paid.txHref)
 
   // ── it must NOT go away on its own ────────────────────────────────────
   await page.waitForTimeout(2600)   // comfortably past the old 1.4s auto-finish

@@ -16,6 +16,7 @@ import { PlayerProfile } from '@/lib/contract'
 import { tokenLabel } from '@/lib/constants/tokens'
 import { useReward } from '@/hooks/useReward'
 import { useWallet } from '@/lib/WalletProvider'
+import { XLAYER_EXPLORER_TX } from '@/lib/xlayerRpc'
 
 interface BurnItem {
   id: string
@@ -104,9 +105,8 @@ type Tab = 'claim' | 'points'
 // Contract defaults for the seasonal top-3 leaderboard bonus
 // (NullStateRewardV2 rank1/2/3Reward — owner-settable via setRankRewards,
 // so this is indicative; the exact payout is enforced on-chain). Shown in
-// USD since every supported reward token (USDm/USDT/USDC) is USD-pegged.
+// USD since every supported reward token (USDC/USDT) is USD-pegged.
 const RANK_BONUS_USD = [20, 5, 3]
-const CELOSCAN_TX = 'https://celoscan.io/tx/'
 
 // The core play-to-earn loop, shown as a banner so a new player sees at a
 // glance how a run turns into real USDT. Game-icons only (react-icons/gi) —
@@ -558,7 +558,7 @@ export default function RewardsScreen({ onBack, address }: RewardsScreenProps) {
                         )}
                         {e.txHash && (
                           <a
-                            href={CELOSCAN_TX + e.txHash}
+                            href={XLAYER_EXPLORER_TX + e.txHash}
                             target="_blank"
                             rel="noreferrer"
                             className="font-mono text-[10px] text-[#c39a5f] underline underline-offset-2 hover:text-[#f2cd82]"

@@ -4,7 +4,7 @@
 - Vercel project linked to this repository
 - Firebase Realtime Database created
 - Service account JSON for Firebase Admin SDK
-- Contract addresses deployed on Celo mainnet
+- Contract addresses deployed on X Layer
 
 ## 2. Required Environment Variables
 Set these in Vercel Project Settings → Environment Variables:
@@ -12,7 +12,7 @@ Set these in Vercel Project Settings → Environment Variables:
 - `NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS`
 - `NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS`
 - `NEXT_PUBLIC_TREASURE_VAULT_ADDRESS`
-- `NEXT_PUBLIC_CELO_RPC`
+- `NEXT_PUBLIC_XLAYER_RPC`
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
@@ -22,7 +22,7 @@ Set these in Vercel Project Settings → Environment Variables:
 - `FIREBASE_DATABASE_URL`
 - `FIREBASE_SERVICE_ACCOUNT`
 - `BACKEND_PRIVATE_KEY`
-- `CELO_RPC_URL`
+- `XLAYER_RPC_URL`
 
 ## 3. Build and Verify Locally
 ```bash

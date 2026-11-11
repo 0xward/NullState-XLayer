@@ -9,7 +9,7 @@ import { reportMetric } from '@/lib/server/dailyContracts'
 // BURN RECORD — NullState Point (Phase 5.5 #8)
 // POST /api/burn/record
 //
-// Burning is fully OFF-CHAIN now. Items no longer feed an on-chain USDm
+// Burning is fully OFF-CHAIN now. Items no longer feed an on-chain stablecoin
 // weekly pool (the old recordBurn() call to NullStateReward.sol has been
 // removed) — instead, the burn's total value is credited straight to the
 // player's NullState Point balance in Firebase RTDB

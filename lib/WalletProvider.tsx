@@ -19,12 +19,12 @@ import { usePrivySigner } from './privySignerBridge'
 // ─── Contract config ─────────────────────────────────────────────────────────
 
 export const NULLSTATE_ADDRESS  = '0xE6C471DD3C715DB8B10457113867885AFA12eC13' as `0x${string}`
-export const CELO_CHAIN_ID      = 42220
-export const CELO_SEPOLIA_CHAIN_ID = 11142220
+export const XLAYER_CHAIN_ID      = 196
+export const XLAYER_TESTNET_CHAIN_ID = 1952
 
 // Phase 0: NullState.sol has been RETIRED — combat/registration are fully
 // off-chain and NULL_STRIKE is FREE. The old game ABI is intentionally empty;
-// the `payUsdmFee()` helper below remains a generic ERC20 transfer used by
+// the `payStableFee()` helper below remains a generic ERC20 transfer used by
 // other flows, not by NULL_STRIKE.
 export const NULLSTATE_ABI = [] as const
 
@@ -35,17 +35,15 @@ export const NULLSTATE_ABI = [] as const
 
 // Extra context values that GameFullUI expects beyond wagmi hooks
 interface WalletExtras {
-  isMiniPay: boolean
-  celoBalance: string
+  nativeBalance: string
   error: string | null
   insufficientFunds: boolean
-  addCashUrl: string | null
-  // Plain ERC20 USDm transfer() to an arbitrary address (e.g. the reward
+  // Plain ERC20 USDC transfer() to an arbitrary address (e.g. the reward
   // contract, to fund the weekly pool for a NULL_STRIKE cast). Does NOT
   // touch NullState.sol / executeAction.
-  payUsdmFee: (amountWei: bigint, toAddress: `0x${string}`) => Promise<string>
+  payStableFee: (amountWei: bigint, toAddress: `0x${string}`) => Promise<string>
   // Marketplace purchase: plain ERC20 transfer() of `priceUsd` worth of the
-  // chosen stablecoin (USDm/USDC/USDT) to the treasury wallet. No contract.
+  // chosen stablecoin (USDC/USDT) to the treasury wallet. No contract.
   buyMarketplaceItem: (priceUsd: number, token: MarketplaceTokenSymbol) => Promise<string>
   // Same function as buyMarketplaceItem, generic name — used by PassSBT
   // minting (usePassSBT.ts) so that call site doesn't read like it's
@@ -54,9 +52,9 @@ interface WalletExtras {
 }
 
 // ─── Guest identity (no-wallet play) ─────────────────────────────────────────
-// So the game can be REGISTERED and PLAYED without connecting a wallet — needed
-// for the MiniPay listing review (the Celo team may open it in a plain Chrome
-// tab or MiniPay dev mode) and for anyone just trying it out. We mint a stable,
+// So the game can be REGISTERED and PLAYED without connecting a wallet —
+// needed for anyone just trying it out, and for a reviewer opening it in a
+// plain browser tab. We mint a stable,
 // wallet-SHAPED id (0x + 40 hex) once and keep it in localStorage, so every
 // Firebase-keyed route (username, saves, materials, energy — all validate
 // /^0x[0-9a-f]{40}$/) accepts it exactly like a real wallet. It is NEVER an
@@ -148,21 +146,18 @@ export function useWallet() {
     // "are we in the middle of working out the wallet situation".
     isConnecting: !w.ready,
     walletReady:  w.ready,
-    isMiniPay:    w.isMiniPay,
     // Connected, wrong chain. Screens that can spend need this because it is
     // the difference between "you have no wallet" and "your wallet is one tap
     // away from working" — and until now both reported the former.
     wrongNetwork: w.wrongNetwork,
-    celoBalance:  w.celoBalance,
+    nativeBalance:  w.nativeBalance,
     error:        w.error,
     insufficientFunds: w.insufficientFunds,
-    addCashUrl:   w.addCashUrl,
     publicClient: w.publicClient,
     // ── WHICH WALLET SIGNS ────────────────────────────────────────────────
     //
-    // wagmi's, whenever there is one. A player who connected MiniPay or a
-    // browser wallet has told us which wallet they mean, and that answer
-    // outranks an embedded wallet they may not even know they have.
+    // wagmi's, whenever there is one. A player who connected a browser wallet
+    // has told us which wallet they mean, and that answer outranks an embedded
     //
     // Privy's only when wagmi has none. That is the Google/email player, whose
     // embedded wallet is the only thing they can sign with.
@@ -174,8 +169,8 @@ export function useWallet() {
     walletClient: w.walletClient ?? privy.walletClient,
     connect:      w.connect,
     disconnect:   w.disconnect,
-    switchToCelo: w.switchToCelo,
-    payUsdmFee:   w.payUsdmFee,
+    switchToXLayer: w.switchToXLayer,
+    payStableFee:   w.payStableFee,
     // Same precedence, same reason. `pay` resolves to wagmi's payToTreasury
     // unless there is no wagmi wallet and Privy has published one of its own —
     // implemented in the lazy island so viem never reaches this module.
@@ -193,10 +188,8 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
   const navbarWallet = useMemo(() => ({
     isConnected: w.isConnected,
     address: w.address,
-    isMiniPay: w.isMiniPay,
     error: w.error,
-    addCashUrl: w.addCashUrl,
-  }), [w.isConnected, w.address, w.isMiniPay, w.error, w.addCashUrl])
+  }), [w.isConnected, w.address, w.error])
 
   return (
     <NavbarWalletContext.Provider value={navbarWallet}>

@@ -2,7 +2,7 @@
 /**
  * test-inventory-render.js — the inventory must not accumulate rows.
  *
- * OWNER BUG, from MiniPay (screenshots): the stash panel filled up with dozens
+ * OWNER BUG (screenshots): the stash panel filled up with dozens
  * of identical "FRAGMENTS -> OLD PAPER" bars, so burning an item meant scrolling
  * past all of them first. "kamu menatuh semua di inventory??? sampe2 aku harus
  * scroll hanya untuk burn item di dalam game".
@@ -95,7 +95,7 @@ const check = (name, got, want) => { results.push({ name, ok: got === want, got,
   check('render pertama: 3 baris (2 loot + 1 golden key)', r.first.item, 3)
   check('setelah 16x render: TETAP 1 bar fragment', r.after16.frag, 1)
   check('setelah 16x render: TETAP 3 baris', r.after16.item, 3)
-  // The property that actually failed in MiniPay: nothing accumulates AT ALL.
+  // The property that actually failed: nothing accumulates AT ALL.
   check('setelah 16x render: jumlah total elemen tidak bertambah', r.after16.all, r.first.all)
   check('panel readonly (jendela peti): tanpa bar', r.readonly, 0)
   check('kedua item sudah dipegang: tanpa bar', r.bothHeld, 0)

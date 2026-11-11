@@ -3,7 +3,7 @@
 ## Overview
 
 NullState uses **wagmi v2 + RainbowKit** for wallet connectivity and **viem** for
-contract reads/writes on Celo Mainnet (chainId 42220).
+contract reads/writes on X Layer (chain ID 196).
 
 ---
 
@@ -69,7 +69,7 @@ function PassPanel({ address }: { address: string }) {
             </button>
           )}
           <button onClick={() => mintPaidPass(seasonId)}>
-            Mint Paid Pass (0.3 USDm)
+            Mint Paid Pass (0.3 USDC)
           </button>
         </>
       )}
@@ -78,8 +78,8 @@ function PassPanel({ address }: { address: string }) {
 }
 ```
 
-> **Note:** Before calling `mintPaidPass`, the user must first approve 0.3 USDm
-> on the USDm token contract (`0x765DE816845861e75A25fCA122bb6898B8B1282a`).
+> **Note:** Before calling `mintPaidPass`, the user must first approve 0.3 USDC
+> on the USDC token contract (`0xB6CEceAB302E2E4948951eE7843FC24E92933061`).
 
 ### NullStateReward — Burn Rewards & Leaderboard
 
@@ -102,8 +102,8 @@ function RewardPanel({ address }: { address: string }) {
 
   return (
     <div>
-      <p>Weekly burn: {formatUnits(weeklyBurnAmount, 18)} USDm</p>
-      <p>Claimable: {formatUnits(weeklyClaimable, 18)} USDm</p>
+      <p>Weekly burn: {formatUnits(weeklyBurnAmount, 6)} USDC</p>
+      <p>Claimable: {formatUnits(weeklyClaimable, 6)} USDC</p>
 
       {weeklyClaimable > 0n && (
         <button onClick={() => claimWeeklyRewards()}>
@@ -140,7 +140,7 @@ function VaultPanel({ address }: { address: string }) {
   const handleSubmit = async (code: string) => {
     const result = await submitVaultCode(code)
     if (result.success) {
-      alert('🎉 Vault opened! 1 USDm claimed.')
+      alert('🎉 Vault opened! 1 USDC claimed.')
     } else {
       alert(`❌ Wrong code. ${remainingAttempts - 1} attempts left.`)
     }
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
   const { walletAddress, weekId, code } = await req.json()
 
   try {
-    const provider = new ethers.JsonRpcProvider(process.env.CELO_RPC_URL)
+    const provider = new ethers.JsonRpcProvider(process.env.XLAYER_RPC_URL)
     const wallet = new ethers.Wallet(process.env.BACKEND_PRIVATE_KEY!, provider)
     const contract = new ethers.Contract(
       process.env.NEXT_PUBLIC_TREASURE_VAULT_ADDRESS!,
@@ -202,15 +202,15 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-Add `BACKEND_PRIVATE_KEY` and `CELO_RPC_URL` to Vercel environment variables
+Add `BACKEND_PRIVATE_KEY` and `XLAYER_RPC_URL` to Vercel environment variables
 (server-side only, **not** prefixed with `NEXT_PUBLIC_`).
 
 ---
 
-## 5. USDm Token Approval (for mintPaidPass)
+## 5. USDC Token Approval (for mintPaidPass)
 
 Before minting a paid pass, the user's wallet must approve the PassSBT contract
-to spend 0.3 USDm on their behalf:
+to spend 0.3 USDC on their behalf:
 
 ```typescript
 import { useWalletClient, usePublicClient } from 'wagmi'
@@ -228,11 +228,11 @@ const ERC20_APPROVE_ABI = [
   },
 ] as const
 
-const USDM_ADDRESS = '0x765DE816845861e75A25fCA122bb6898B8B1282a'
-const PASS_PRICE = 300000000000000000n // 0.3 USDm in wei
+const USDC_ADDRESS = '0xB6CEceAB302E2E4948951eE7843FC24E92933061'
+const PASS_PRICE = 300000n // 0.3 USDC (6 decimals)
 
 const hash = await walletClient.writeContract({
-  address: USDM_ADDRESS,
+  address: USDC_ADDRESS,
   abi: ERC20_APPROVE_ABI,
   functionName: 'approve',
   args: [PASS_SBT_ADDRESS, PASS_PRICE],
@@ -261,8 +261,8 @@ await publicClient.waitForTransactionReceipt({ hash })
 
 | Property | Value |
 |---|---|
-| Network | Celo Mainnet |
-| Chain ID | `42220` |
-| RPC | `https://forno.celo.org` |
-| Explorer | `https://celoscan.io` |
-| USDm Token | `0x765DE816845861e75A25fCA122bb6898B8B1282a` |
+| Network | X Layer |
+| Chain ID | `196` (mainnet) / `1952` (testnet) |
+| RPC | `https://rpc.xlayer.tech` (mainnet) / `https://testrpc.xlayer.tech` (testnet) |
+| Explorer | `https://www.okx.com/web3/explorer/xlayer` |
+| USDC Token | `0xB6CEceAB302E2E4948951eE7843FC24E92933061` |

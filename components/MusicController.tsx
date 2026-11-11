@@ -19,7 +19,7 @@ import { loadEngineScript } from '@/lib/engineScript'
 // 851KB, and there is no audio file to stream at all.
 //
 // AUTOPLAY: browsers refuse to start audio before the user has interacted with
-// the page, and a MiniPay webview is no different. So this tries immediately
+// the page, and a mobile webview is no different. So this tries immediately
 // (which works on a repeat visit where the context is already unlocked) and
 // otherwise arms a one-shot listener for the first tap anywhere — the same
 // pattern game.js already uses in-run. Nothing is ever forced on someone who

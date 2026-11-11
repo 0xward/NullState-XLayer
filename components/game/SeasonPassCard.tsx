@@ -25,7 +25,7 @@ export interface SeasonPassCardProps {
   mintPhase: 'idle' | 'paying' | 'verifying' | 'minting'
   // Live on-chain price as a plain USD string (e.g. "10.00"), read from the
   // contract by usePassSBT. null while loading. Token-agnostic on purpose —
-  // MiniPay pays in whichever stablecoin the wallet holds most of.
+  // the player pays in whichever stablecoin the wallet holds most of.
   priceUsd: string | null
   onMint: () => void
 }
@@ -212,10 +212,10 @@ export default function SeasonPassCard({
       buttonLabel = 'SOLD OUT'
       buttonDisabled = true
     } else if (!isConnected) {
-      // MiniPay auto-connects silently on load; this state should only be
+      // The wallet auto-connects silently on load; this state should only be
       // momentary. Deliberately avoid the phrase "Connect Wallet" here —
-      // MiniPay's submission checklist explicitly requires apps to never
-      // show connect-wallet language, even as a disabled status label.
+      // the game never shows connect-wallet language, even as a disabled
+      // status label.
       buttonLabel = 'WALLET SYNCING…'
       buttonDisabled = true
     }
@@ -277,7 +277,7 @@ export default function SeasonPassCard({
         </button>
         {!hasPass && mintPhase === 'idle' && (
           <div className="mt-2 text-[#9c7a4f] text-[9px] tracking-[1px] uppercase text-center">
-            Paid in your MiniPay stablecoin
+            Paid in your stablecoin
           </div>
         )}
       </div>

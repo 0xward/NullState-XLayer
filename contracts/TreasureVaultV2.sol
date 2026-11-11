@@ -7,28 +7,20 @@ pragma solidity ^0.8.20;
  * @dev Handles vault code management, reward distribution, and attempt tracking
  *
  * WHY V2 EXISTS (read this first):
- * The original TreasureVault.sol hardcoded USDC/USDT/CELO token addresses
- * that turned out to be WRONG (cross-checked against
- * docs.celo.org/tooling/contracts/token-contracts, the official Celo
- * docs site) — the exact same bug found in NullStateReward.sol, since
- * both contracts copied the same (wrong) address block:
- *
- *   Token | was hardcoded (WRONG)                     | correct (docs.celo.org)
- *   USDC  | 0xeF63B1FdEfA2C442f41911160bCEFdaD5896e107 | 0xcebA9300f2b948710d2653dD7B07f33A8B32118C
- *   USDT  | 0x88eEc42eaf6E1b371f4a7e786fDDB2E782b72ccA | 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e
- *   CELO  | 0x471ecE3750da237F93b8e339C536Cb1483c48E8f | 0x471EcE3750Da237f93B8E339c536989b8978a438
- *
- * (USDm was already correct: 0x765DE816845861e75A25fCA122bb6898B8B1282a).
- * Not upgradeable in place (plain contract, no proxy), so v2 corrects
- * the addresses at deploy time instead of patching them post-hoc.
+ * The original TreasureVault.sol hardcoded token addresses that turned out
+ * to be WRONG — the exact same bug found in NullStateReward.sol, since both
+ * contracts copied the same (wrong) address block: calls made with them
+ * would have interacted with the wrong contract entirely (or, for the
+ * native-token marker, an address that isn't how the native token is
+ * represented). Not upgradeable in place (plain contract, no proxy), so v2
+ * corrects the addresses at deploy time instead of patching them post-hoc.
  *
  * WHAT ELSE CHANGED FROM V1:
  * - `VAULT_REWARD` is no longer `constant`. It's now `vaultReward`, a
  *   regular state variable (still defaulting to 1 USDm) with an
  *   owner-only setter (`setVaultReward`), so the reward amount can
  *   change without a redeploy.
- * - Token addresses (usdmToken/usdtToken/usdcToken/celoToken) are now
- *   owner-settable via setUsdmToken/setUsdtToken/setUsdcToken/setCeloToken,
+ * - Token addresses are now owner-settable via the set*Token setters,
  *   in addition to being corrected at deploy time.
  * - `MAX_ATTEMPTS_PER_WEEK` stays a `constant` (3) — this is a game rule,
  *   not a reward/economic nominal, so it was left out of the
@@ -36,7 +28,7 @@ pragma solidity ^0.8.20;
  *
  * Features (unchanged from v1):
  * - Weekly randomized 4-digit codes (regenerate every Monday 00:00 UTC)
- * - Multi-token support: USDm, USDT, USDC, CELO
+ * - Multi-token support: USDm, USDT, USDC, native token
  * - Claim limit: 1x per week per user
  * - Attempt limit: Max 3 wrong attempts before lock until next week
  * - Separate reward pool (independent from burn & seasonal bonus pools)
@@ -76,9 +68,8 @@ contract TreasureVaultV2 is Ownable {
     /// not an economic nominal, so left as a constant.
     uint256 public constant MAX_ATTEMPTS_PER_WEEK = 3;
 
-    // ============ Token Addresses (Celo Mainnet) ============
-    // Corrected addresses (cross-checked against docs.celo.org/tooling/
-    // contracts/token-contracts) — see "WHY V2 EXISTS" above. Each has an
+    // ============ Token Addresses ============
+    // Token addresses — see "WHY V2 EXISTS" above. Each has an
     // owner-only setter below in case of a future migration/correction.
 
     /// @dev USDm (Mento Dollar) - primary reward token
@@ -90,7 +81,7 @@ contract TreasureVaultV2 is Ownable {
     /// @dev USDC - alternative reward token
     IERC20 public usdcToken = IERC20(0xcebA9300f2b948710d2653dD7B07f33A8B32118C);
 
-    /// @dev CELO native token address marker
+    /// @dev Native token address marker
     address public celoToken = 0x471EcE3750Da237f93B8E339c536989b8978a438;
 
     // ============ Vault Code Storage ============
@@ -191,7 +182,7 @@ contract TreasureVaultV2 is Ownable {
 
     /// @notice Switch reward token (for future flexibility)
     /// @dev Only owner can change reward token
-    /// @param _newToken Address of new reward token (must be USDm, USDT, USDC, or CELO)
+    /// @param _newToken Address of new reward token (must be USDm, USDT, USDC, or the native token)
     function setRewardToken(address _newToken) external onlyOwner {
         require(
             _newToken == address(usdmToken) ||
@@ -234,7 +225,7 @@ contract TreasureVaultV2 is Ownable {
         emit TokenAddressUpdated("USDC", _token);
     }
 
-    /// @notice Update the native-CELO marker address (owner-only fix path)
+    /// @notice Update the native-token marker address (owner-only fix path)
     function setCeloToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
         celoToken = _token;
@@ -245,7 +236,7 @@ contract TreasureVaultV2 is Ownable {
 
     /// @notice Owner deposits into vault reward pool
     /// @dev Accepts any supported token, tracks total deposited
-    /// @param _token Token address (USDm, USDT, USDC, or CELO)
+    /// @param _token Token address (USDm, USDT, USDC, or the native token)
     /// @param _amount Amount to deposit (in wei)
     function depositVaultPool(address _token, uint256 _amount) external payable onlyOwner {
         require(
@@ -264,7 +255,7 @@ contract TreasureVaultV2 is Ownable {
                 "Transfer failed"
             );
         } else {
-            // @dev For CELO, payment via msg.value handled separately
+            // @dev For the native token, payment via msg.value handled separately
             require(msg.value >= _amount, "Insufficient CELO");
         }
 
@@ -382,7 +373,7 @@ contract TreasureVaultV2 is Ownable {
                     "Transfer failed"
                 );
             } else {
-                // @dev Send CELO native
+                // @dev Send the native token
                 (bool success, ) = _user.call{value: vaultReward}("");
                 require(success, "CELO transfer failed");
             }
@@ -472,7 +463,7 @@ contract TreasureVaultV2 is Ownable {
         available = deposited > claimed ? deposited - claimed : 0;
     }
 
-    // ============ Receive CELO Payments ============
-    /// @dev Allow contract to receive CELO for pool deposits and reward transfers
+    // ============ Receive native token payments ============
+    /// @dev Allow contract to receive the native token for pool deposits and reward transfers
     receive() external payable {}
 }

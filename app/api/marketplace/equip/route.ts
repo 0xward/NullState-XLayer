@@ -16,7 +16,7 @@ import { activeTrialInfos, type TrialRecord } from '@/lib/server/trials'
 // keyed by wallet — same durability guarantee as marketplaceOwned. Before
 // this endpoint existed, the equipped choice only ever lived in the HP's
 // localStorage (see window.NS_saveEquipment in game.js), which meant
-// uninstalling/reinstalling MiniPay (or switching devices) reset it back
+// uninstalling/reinstalling the app (or switching devices) reset it back
 // to "nothing equipped" even though the owned item itself was never lost.
 //
 // Response: { success: true, equipped: { mainhand, body, outfit } }

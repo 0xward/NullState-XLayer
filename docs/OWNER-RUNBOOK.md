@@ -1,6 +1,6 @@
 # NullState — Owner Runbook
 
-What the owner does to keep the live game (and its MiniPay listing) healthy,
+What the owner does to keep the live game healthy,
 now that development is done. Operational companion to
 [`TREASURY-OPS.md`](./TREASURY-OPS.md) (the funding/command cheat-sheet).
 
@@ -12,12 +12,11 @@ Security at the bottom).
 
 ## 🗓️ Daily (5–10 min)
 
-1. **Support** — check Telegram (`t.me/nullstate_id`) and reply. MiniPay
-   requires **critical issues fixed within 24h** or the listing can be
-   suspended. This is the single most important recurring task.
+1. **Support** — check Telegram (`t.me/nullstate_id`) and reply. Critical
+   issues get fixed within 24h. This is the single most important recurring task.
 2. **Backend gas** — the backend wallet `0xAb73e0E9…F92f2eb6` auto-signs vault
-   payouts and stores the weekly code. **If its CELO runs out, payouts fail.**
-   Keep a small CELO balance on it.
+   payouts and stores the weekly code. **If its OKB runs out, payouts fail.**
+   Keep a small OKB balance on it.
 3. **Quick health check** — open the game (Continue / New Game both work?),
    glance at Vercel (no red errors) and `/stats` (no weird spikes).
 
@@ -198,7 +197,7 @@ is the whole recovery — no money is at risk either way.
 
 ## 🔧 As needed
 
-- **Top up gas (CELO)** on both wallets: deployer `0x2A6b5204…b7d912F7` (Termux
+- **Top up gas (OKB)** on both wallets: deployer `0x2A6b5204…b7d912F7` (Termux
   ops) and backend `0xAb73e0E9…F92f2eb6` (Vercel).
 - **Watch `/stats`** — a rising failed-tx rate usually means something broke.
 - **Ship fixes/features** — but **batch** several changes into one PR/deploy so
@@ -211,7 +210,7 @@ is the whole recovery — no money is at risk either way.
 |------|--------|---------|
 | Backend gas runs out | Payouts & pass mints fail | Daily gas check |
 | Vault / season pool empty | Rewards can't be paid | Weekly / monthly top-up |
-| Critical issue open > 24h | MiniPay may suspend the listing | Monitor support |
+| Critical issue open > 24h | Players lose trust and stop playing | Monitor support |
 | Private key leaks | Treasury funds can be drained | Keep keys out of the repo (below) |
 
 **Realistic priority:** the only truly non-negotiable routines are

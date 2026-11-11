@@ -1,10 +1,8 @@
 import { createPublicClient, createWalletClient, formatUnits, type PublicClient, type WalletClient } from 'viem'
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts'
-import { celo } from 'viem/chains'
-import { celoTransport } from '@/lib/celoRpc'
+import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
 import { TREASURE_VAULT_ABI, TREASURE_VAULT_ADDRESS } from '@/lib/contract-abi'
 import { MARKETPLACE_TOKENS } from '@/lib/constants/tokens'
-import { getServerAttributionSuffix } from '@/lib/attribution-tag'
 
 // ─── Every on-chain thing the Treasure Vault does, in one place ──────────────
 //
@@ -15,22 +13,22 @@ import { getServerAttributionSuffix } from '@/lib/attribution-tag'
 // stored and did a single write — which is exactly why it survived so long and
 // why it looked random.
 //
-// Measured on Celo, week 202632, with the owner's own wallet:
+// Measured on X Layer, week 202632, with the owner's own wallet:
 //
 //   pool balance ................ 0.85 USDT   (reward is 0.05)  — enough
 //   deposited 1.00 / claimed 0.15 ............................. — enough
-//   backend signer .............. 0.645 CELO                    — enough gas
+//   backend signer .............. 0.645 OKB                     — enough gas
 //   isCodeSetForWeek(202632) .... true
 //   simulate submitVaultCode .... does NOT revert
-//   celoscan .................... "Store Weekly Vault Code" SUCCEEDED,
+//   OKLink ...................... "Store Weekly Vault Code" SUCCEEDED,
 //                                 "Submit Vault Code" WAS NEVER BROADCAST
 //
 // Not a revert. Not a funding problem. The second write never reached the
-// mempool at all. Forno is load-balanced, so the node that answered the nonce
-// read for write #2 was not necessarily the node that had already seen write
-// #1 — a stale nonce or stale state gets the transaction rejected at the RPC
-// boundary, before it is ever a transaction. The route caught that, logged it,
-// and reported "pending".
+// mempool at all. The public RPC is load-balanced, so the node that answered the
+// nonce read for write #2 was not necessarily the node that had already seen
+// write #1 — a stale nonce or stale state gets the transaction rejected at the
+// RPC boundary, before it is ever a transaction. The route caught that, logged
+// it, and reported "pending".
 //
 // THREE THINGS CHANGE HERE, and the first one is the one that matters:
 //
@@ -101,10 +99,10 @@ const VAULT_READ_ABI = [
   { name: 'currentRewardToken', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
 ] as const
 
-// Enough CELO to pay for one write with room to spare. The signer had 0.645
-// CELO when this was measured and a vault write costs a small fraction of a
+// Enough OKB to pay for one write with room to spare. The signer had 0.645
+// OKB when this was measured and a vault write costs a small fraction of a
 // cent, so this threshold is a smoke alarm, not a budget.
-const MIN_SIGNER_CELO_WEI = BigInt(2) * BigInt(10) ** BigInt(16) // 0.02 CELO
+const MIN_SIGNER_OKB_WEI = BigInt(2) * BigInt(10) ** BigInt(16) // 0.02 OKB
 
 const PAYOUT_ATTEMPTS = 3
 const PAYOUT_BACKOFF_MS = [700, 1800]
@@ -121,10 +119,10 @@ export function getVaultClients(): VaultClients | null {
   if (!key || !TREASURE_VAULT_ADDRESS || TREASURE_VAULT_ADDRESS === '0x') return null
   try {
     const account = privateKeyToAccount(key)
-    const transport = celoTransport()
+    const transport = xlayerTransport()
     return {
-      publicClient: createPublicClient({ chain: celo, transport }) as PublicClient,
-      walletClient: createWalletClient({ chain: celo, transport, account }),
+      publicClient: createPublicClient({ chain: xLayerChain, transport }) as PublicClient,
+      walletClient: createWalletClient({ chain: xLayerChain, transport, account }),
       account,
     }
   } catch {
@@ -185,8 +183,7 @@ export async function ensureWeeklyCodeOnChain(
       functionName: 'storeWeeklyVaultCode',
       args: [BigInt(weekId), code],
       account,
-      chain: celo,
-      dataSuffix: getServerAttributionSuffix(),
+      chain: xLayerChain,
     })
     await publicClient.waitForTransactionReceipt({ hash })
     return { onChain: true, stored: true, txHash: hash }
@@ -251,7 +248,7 @@ export async function payVaultWinner(params: {
     if (available < reward) return { ok: false, reason: 'pool_empty' }
 
     const gas = await publicClient.getBalance({ address: account.address })
-    if (gas < MIN_SIGNER_CELO_WEI) return { ok: false, reason: 'signer_out_of_gas' }
+    if (gas < MIN_SIGNER_OKB_WEI) return { ok: false, reason: 'signer_out_of_gas' }
   } catch {
     // A preflight that cannot be read is an RPC problem, not a verdict. Fall
     // through and let the write itself decide — never refuse to pay because a
@@ -273,8 +270,7 @@ export async function payVaultWinner(params: {
         functionName: 'submitVaultCode',
         args: [user, weekBig, expectedCode],
         account,
-        chain: celo,
-        dataSuffix: getServerAttributionSuffix(),
+        chain: xLayerChain,
       })
       const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
       if (receipt.status !== 'success') {
@@ -337,9 +333,8 @@ export async function storeThenPay(params: {
       functionName: 'storeWeeklyVaultCode',
       args: [BigInt(weekId), expectedCode],
       account,
-      chain: celo,
+      chain: xLayerChain,
       nonce: baseNonce,
-      dataSuffix: getServerAttributionSuffix(),
     })
 
     const payHash = await walletClient.writeContract({
@@ -348,9 +343,8 @@ export async function storeThenPay(params: {
       functionName: 'submitVaultCode',
       args: [walletAddress as `0x${string}`, BigInt(weekId), expectedCode],
       account,
-      chain: celo,
+      chain: xLayerChain,
       nonce: baseNonce + 1,
-      dataSuffix: getServerAttributionSuffix(),
     })
 
     await publicClient.waitForTransactionReceipt({ hash: storeHash, timeout: 60_000 })

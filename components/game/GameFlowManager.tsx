@@ -13,7 +13,6 @@ import { readHighestAct, recordHighestAct, stashCampaignResume, takeCampaignResu
 import MainMenu from './MainMenu'
 import WorldMapHub from './WorldMapHub'
 import { useWorldMapHubFlag } from '@/lib/worldMapHubFlag'
-import { usePrivyGateFlag, liftGateVeil } from '@/lib/privyGateFlag'
 import { markCampaignComplete } from '@/lib/campaignComplete'
 import NewGameConfirmModal from './NewGameConfirmModal'
 import WelcomeGiftModal from './WelcomeGiftModal'
@@ -33,19 +32,12 @@ const UsernameSetup = dynamic(() => import('./UsernameSetup'), {
 })
 // Split hardest of all: this one pulls firebase/auth behind it, which is a
 // separate entry point from the Firestore SDK the rest of the app already
-// loads. Most players never render it — everyone in MiniPay, everyone with a
-// wallet, everyone who has skipped once — so it must never be in the initial
-// chunk.
+// loads. Most players never render it — everyone with a wallet, everyone who
+// has skipped once — so it must never be in the initial chunk.
 const SignInScreen = dynamic(() => import('./SignInScreen'), {
   ssr: false,
   loading: () => <ScreenLoadingFallback label="LOADING SIGN IN" />,
 })
-// The Privy gate is TEMPORARY scaffolding for a talent.app judging period and
-// pulls a large SDK, so it is loaded only when the flag is on and the player is
-// outside MiniPay. `ssr: false` because Privy is browser-only. See
-// lib/privyGateFlag.ts for why this is off by default.
-const PrivyGate = dynamic(() => import('./PrivyGate'), { ssr: false })
-
 const Leaderboard = dynamic(() => import('./Leaderboard'), {
   ssr: false,
   loading: () => <ScreenLoadingFallback label="LOADING LEADERBOARD" />,
@@ -113,7 +105,7 @@ type GamePhase = 'menu' | 'sign-in' | 'username-setup' | 'character-select' | 'g
  * All player progress is stored ON-CHAIN via the contract.
  */
 export default function GameFlowManager() {
-  const { address, isConnected, realAddress, isGuest, isSignedIn, isMiniPay, walletReady, connect } = useWallet()
+  const { address, isConnected, realAddress, isGuest, isSignedIn, connect } = useWallet()
   const {
     playerProfile,
     isLoading: isLoadingProfile,
@@ -153,7 +145,6 @@ export default function GameFlowManager() {
   // on (see lib/worldMapHubFlag.ts — OFF by default). HowToPlayScreen reads the
   // same flag, so the help text always matches the screen the player gets.
   const useWorldMapHub = useWorldMapHubFlag()
-  const privyGateOn = usePrivyGateFlag()
 
   // Bunker cleared → surface back to the world map, so the run's progress lands
   // somewhere visible (the ✓ appears, the next bunker loses its fog) instead of
@@ -375,12 +366,12 @@ export default function GameFlowManager() {
   // be finished off — Firebase knows who the player is, but nothing has turned
   // that into the address the rest of the app is keyed by yet.
   //
-  // Guarded three ways so this never costs anything for the overwhelming
-  // majority who never signed in at all: MiniPay is out, an already-adopted
-  // account is out, and firebase/auth is only import()ed after the URL itself
-  // says there is something to finish.
+  // Guarded two ways so this never costs anything for the overwhelming
+  // majority who never signed in at all: an already-adopted account is out,
+  // and firebase/auth is only import()ed after the URL itself says there is
+  // something to finish.
   useEffect(() => {
-    if (isMiniPay || getStoredAuthAddress()) return
+    if (getStoredAuthAddress()) return
     let cancelled = false
     ;(async () => {
       const hasLinkInUrl = typeof window !== 'undefined' && window.location.href.includes('apiKey=')
@@ -404,7 +395,7 @@ export default function GameFlowManager() {
     })()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMiniPay])
+  }, [])
 
   // Actually begins a fresh run (marks isNewRun so DungeonGame's mount
   // effect skips loading any saved bunker snapshot). v72 (user finding #2):
@@ -491,19 +482,11 @@ export default function GameFlowManager() {
    * unreachable and most guests never pass through New Game anyway.
    */
   const goPlaying = (next: GamePhase) => {
-    // OWNER: *"halaman login google email yg lama matikan aja, fungsi yg lama
-    // juga kan sebenernya sama aja kaya fungsi privy skrg."* He is right — both
-    // end in the same derived account address, so with the gate on this screen
-    // would be a SECOND way to make the same account, using a different
-    // mechanism, asked at a different moment.
-    //
-    // Stated as a condition rather than left to fall out of the skip flag. It
-    // already could not appear (the gate stores an identity or remembers the
-    // skip, and both make shouldOfferSignIn() false), but "cannot happen
-    // because of a side effect three functions away" is how a screen comes
-    // back. With the flag off this line does nothing and the old screen returns
-    // exactly as it was.
-    if (!privyGateOn && shouldOfferSignIn()) {
+    // Offer the sign-in screen once on the way in, so a guest who wants their
+    // progress to follow them gets the chance before the run starts — and
+    // never twice: shouldOfferSignIn() stays false once they have an account,
+    // a wallet, or have declined.
+    if (shouldOfferSignIn()) {
       pendingPhase.current = next
       setPhase('sign-in')
       return
@@ -513,12 +496,9 @@ export default function GameFlowManager() {
 
   // ── Save-your-progress: who gets asked, and who never does ─────────────────
   //
-  // Four ways to not be asked, and each one is a case where asking would be
+  // Three ways to not be asked, and each one is a case where asking would be
   // wrong rather than merely unnecessary:
   //
-  //   isMiniPay      MiniPay's listing rules require zero-click connection. A
-  //                  screen between the player and the game is the friction
-  //                  they reject, and the wallet is already there anyway.
   //   realAddress    They have a wallet. It already does everything an account
   //                  does and more.
   //   authAddress    Already signed in. Asking again says the first time did
@@ -530,62 +510,7 @@ export default function GameFlowManager() {
   // player who taps New Game drops straight into the game, which is the v72
   // finding above and is not being undone here.
   const shouldOfferSignIn = () =>
-    !isMiniPay && !realAddress && !getStoredAuthAddress() && !hasSkippedSignIn()
-
-  // ── THE PRIVY GATE ────────────────────────────────────────────────────────
-  //
-  // Owner: it must appear "setelah loading/splash pertama" — i.e. on arrival,
-  // not on the way into a run like the Firebase screen it stands in for. That
-  // is deliberate on his side: the talent.app judges need to see the wallet +
-  // Google option without having to press anything first.
-  //
-  // It reuses `shouldOfferSignIn()` verbatim rather than writing a second
-  // condition, so the four people who are never asked stay never asked — and
-  // the first of those four is MiniPay. This gate cannot reach them.
-  //
-  // Skippable, per the owner's choice: a player who declines plays as a guest
-  // exactly as before. Declining is remembered, so it asks once and not again.
-  const [gateDone, setGateDone] = useState(false)
-
-  // ── THE MINIPAY FLASH, AND WHY WAITING WAS THE WRONG FIX ──────────────────
-  //
-  // OWNER, testing inside MiniPay: *"masih sempet muncul halaman loginnya,
-  // meskipun sekedip langsung hilang."* He is right that it matters — a screen
-  // between the player and the game is exactly what MiniPay's listing rules
-  // reject, and "only for a moment" is not a defence.
-  //
-  // The cause was timing, not logic. `isMiniPay` is read from window.ethereum
-  // inside WagmiIsland, and lib/Web3Providers.tsx mounts that island on
-  // requestIdleCallback with a 1500ms ceiling — so the bridge served its
-  // default `isMiniPay: false` to a MiniPay player for up to a second and a
-  // half, and shouldOfferSignIn() answered "yes, ask them".
-  //
-  // The obvious fix — hold the gate until `walletReady` — was written, measured
-  // and thrown away. It works, but it costs the thing this screen exists for:
-  //
-  //     inside MiniPay   gate never appeared (0 of 165 polls over 5s)  ✓
-  //     outside          map at 50ms, gate at 1272ms                   ✗
-  //
-  // A login that lands on top of a map the player has already been looking at
-  // for a second IS the bug he reported the first time. So the wait is gone and
-  // the guarantee moved into lib/privyGateFlag.ts, which reads MiniPay straight
-  // off window.ethereum and needs nothing mounted — correct on the very first
-  // render, and re-checked for a beat afterwards in case injection is late.
-  //
-  // `walletReady` stays in the destructure above deliberately unused by this
-  // rule: shouldOfferSignIn()'s own `!isMiniPay` is the third guard, and it
-  // arrives when wagmi does.
-  const showPrivyGate = privyGateOn && !gateDone && shouldOfferSignIn()
-
-  // The one case the inline script cannot decide for itself: it can read
-  // localStorage and window.ethereum, but not whether an injected wallet is
-  // about to connect — that needs wagmi. So if the sheet went down and the gate
-  // turns out not to be coming, lift it as soon as the wallet situation is
-  // known. `walletReady` is that moment. (The script's own 3s timer is the
-  // backstop for a React that never arrives at all.)
-  useEffect(() => {
-    if (walletReady && !showPrivyGate) liftGateVeil()
-  }, [walletReady, showPrivyGate])
+    !realAddress && !getStoredAuthAddress() && !hasSkippedSignIn()
 
   // The identity work itself lives in lib/useAccountActions — Settings needs
   // the same three actions, and the migrate-then-store ORDER is too easy to get
@@ -751,41 +676,6 @@ export default function GameFlowManager() {
     setPhase('settings')
   }
 
-  // ── THE PRIVY GATE, AHEAD OF EVERYTHING ───────────────────────────────────
-  //
-  // Above `phase === 'menu'` on purpose, and it was BELOW it in the first
-  // version — which is the whole bug the owner hit: the map is what 'menu'
-  // renders, so the gate could not appear until something moved the phase off
-  // it, and the login turned up AFTER the world map instead of before it.
-  //
-  // OWNER: *"harusnya sebelum user membuka maps, jd di awal banget persis
-  // setelah user klik Play game di landing page."*
-  //
-  // Nothing else may render first. This is the first screen of the session.
-  if (showPrivyGate) {
-    return (
-      <PrivyGate
-        onAuthenticated={async (uid, label, payoutAddress) => {
-          // Through the SAME adopt() the Firebase screen uses: derive an
-          // address from the id, carry the guest's progress onto it, store the
-          // identity. Nothing about Privy is special here — adopt() only ever
-          // wanted a stable id, and this is one. Without this the screen's own
-          // promise ("it follows you anywhere") would be false.
-          try {
-            // The embedded wallet FIRST, so that even a failed migration leaves
-            // the player with somewhere a prize could be sent.
-            storePayoutAddress(payoutAddress)
-            await acct.adopt(uid, label)
-          } finally {
-            // Even a failed migration must not trap the player on this screen.
-            setGateDone(true)
-          }
-        }}
-        onSkip={() => { acct.rememberSkipped(); setGateDone(true) }}
-      />
-    )
-  }
-
   // PHASE: MENU
   if (phase === 'menu') {
     // Same props for both — the hub is a drop-in swap for the classic menu.
@@ -827,8 +717,7 @@ export default function GameFlowManager() {
   }
 
   // PHASE: SIGN IN — offered once, before the name, and only to the players
-  // who have nothing keeping their progress. See shouldOfferSignIn(). Off
-  // entirely while the Privy gate is on; see goPlaying().
+  // who have nothing keeping their progress. See shouldOfferSignIn().
   if (phase === 'sign-in') {
     return (
       <SignInScreen

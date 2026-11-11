@@ -12,7 +12,7 @@ import { SITE_URL } from '@/lib/siteUrl'
 // This route serves that path. Until now nothing did: `public/assets/sbt-pass/`
 // never existed, so every pass ever minted resolved to a 404. In the game the
 // pass looks right, because the game draws it from its own UI and never reads
-// tokenURI — but in a wallet, on Celoscan, or in any NFT viewer, a paid item
+// tokenURI — but in a wallet, on the explorer, or in any NFT viewer, a paid item
 // showed up as an unnamed token with no image. That is the entire audience who
 // looks at a purchase somewhere other than inside the game.
 //
@@ -51,7 +51,7 @@ export async function GET(_req: Request, { params }: { params: { file: string } 
         `Season ${number} of NULL_STATE, ${label}. A soulbound pass for the Forsaken Depths: ` +
         `it unlocks cosmetic and convenience perks for the season it belongs to and cannot be ` +
         `transferred or sold. Every gameplay advantage it touches is also reachable for free — ` +
-        `the pass buys time and appearance, never power. Playable in MiniPay.`,
+        `the pass buys time and appearance, never power. Playable on X Layer.`,
       image: `${SITE_URL}/Season_${number}.png`,
       external_url: SITE_URL,
       attributes: [

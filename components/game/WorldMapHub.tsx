@@ -14,6 +14,7 @@ import { usePassSBT } from '@/hooks/usePassSBT'
 import { isPassCurrent, seasonNumberOf } from '@/lib/season'
 import { MusicButton, useMusic } from '@/components/MusicController'
 import { playUiSound, type UiSound } from '@/lib/uiSound'
+import TapeOutPanel from './TapeOutPanel'
 
 // ─── World-Map Hub (Phase 1+2 — behind a feature flag) ───────────────────────
 // A game-style landing that REPLACES MainMenu when enabled (?hub=1 or
@@ -320,6 +321,10 @@ export default function WorldMapHub({
 
   return (
     <div className="ns-home-root fixed inset-0 z-50 overflow-hidden ns-fade-in" style={{ background: '#060b09' }}>
+      {/* TapeOut network strip — live on-chain data from X Layer mainnet
+          (processor count, featured processor, reference circuit owner).
+          Read-only, no wallet, no transaction. See lib/tapeout.ts. */}
+      <TapeOutPanel />
       {/* Map layer — keeps the art's own aspect ratio so node markers stay glued
           to the painted doors regardless of screen size (see .ns-hub-map). */}
       <div className="ns-hub-map">
@@ -501,7 +506,7 @@ export default function WorldMapHub({
         <MusicButton muted={musicMuted} onToggle={toggleMusic} style={{ width: 38, height: 38, minHeight: 38 }} />
 
         {/* Sized up from 32px/9px: it sat below the 44px minimum tap target
-            MiniPay asks for, and read as an afterthought next to the help
+            (WCAG 2.5.5), and read as an afterthought next to the help
             button it shares a corner with. */}
         <button
           onClick={() => { playUiSound('panel'); setMenuOpen(true) }}
@@ -721,7 +726,7 @@ export default function WorldMapHub({
               </div>
             )}
 
-            {/* MiniPay requirement: Support / Terms / Privacy reachable here */}
+            {/* Support / Terms / Privacy reachable here */}
             <div className="mt-6 flex items-center justify-center gap-3 flex-wrap">
               <a href="https://t.me/nullstate_id" rel="noopener noreferrer" className="inline-flex items-center font-mono uppercase no-underline" style={{ minHeight: 44, padding: '0 8px', fontSize: 10, letterSpacing: '2px', color: 'rgba(255,255,255,.5)' }}>Support</a>
               <span style={{ color: 'rgba(255,255,255,.3)' }} aria-hidden="true">·</span>

@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     // Rides the same daily wake-up, for the same reasons as the prune above,
     // and for one more: it is the ONLY route to a stuck reward that does not
     // ask the player to re-clear Bunker 5 and kill the final boss to reach the
-    // vault door again. The owner had to read the contract on celoscan to
+    // vault door again. The owner had to read the contract on the explorer to
     // recover his; a player cannot. See lib/server/vaultSweep.ts.
     //
     // Caught, never thrown: a payout that cannot be retried must not stop a

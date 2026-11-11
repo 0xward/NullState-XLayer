@@ -75,14 +75,14 @@ let START_MODE = null;
 // surfaces the player back to the map (so they watch the ✓ land and the next
 // door unlock) instead of walking straight into the next act's outdoor scene.
 let WORLDMAP_HUB = false;
-// CARRY_OVER_SNAPSHOT: bridges progress (loot, xp/level/kills/celo/hp, key/
+// CARRY_OVER_SNAPSHOT: bridges progress (loot, xp/level/kills/hp, key/
 // paper run-caps) across the outdoor walk between two bunkers in the SAME
 // run. Captured in onActBunkerCleared() right before that bunker's G is
 // torn down, and consumed (then nulled — single-use, same pattern as
 // SAVED_SESSION above) the moment the player reaches the next bunker's door
 // in onOutdoorReachedDoor(). Without this, newGame() at the next bunker had
 // nothing but INITIAL_STATS (the on-chain baseline captured once at mount)
-// to fall back on, so loot AND in-run xp/level/kills/celo/hp all silently
+// to fall back on, so loot AND in-run xp/level/kills/hp all silently
 // reset to that old baseline every time a bunker was cleared — not just
 // loot.
 let CARRY_OVER_SNAPSHOT = null;
@@ -428,8 +428,8 @@ function applyLevelStats(p, level){
 // Apply a saved/baseline snapshot to a freshly-constructed player + G.
 // `snap` shape: { xp, level, kills, hp, depth, maxDepthReached,
 //                 inventory:{keys,relics,shards}, key:{depth,taken} }
-// (v40 — `celo` removed: dead in-run stat, never wired to any real
-// currency/balance.)
+// (v40 — the old in-run currency stat removed: dead, never wired to any
+// real currency/balance.)
 function applyRestoredState(G, p, snap){
   applyLevelStats(p, snap.level || 1);
   p.xp = snap.xp || 0;
@@ -475,7 +475,7 @@ function applyRestoredState(G, p, snap){
 // instant-read local cache of data that actually lives in Firebase, keyed
 // by wallet — components/game/DungeonGame.tsx refreshes both from the
 // server (GET /api/marketplace/owned) right before mounting the engine, so
-// this stays correct even after a MiniPay uninstall/reinstall or a switch
+// this stays correct even after an app reinstall or a switch
 // to a different device. `nullstate-owned-<wallet>` is also written
 // directly by components/game/MarketplaceScreen.tsx (persist()) the moment
 // a purchase is confirmed; `nullstate-equipped-<wallet>` is written by
@@ -998,7 +998,7 @@ function decorSolidAt(px, py){
 
 // ---- a floor must always be walkable end to end -----------------------------
 //
-// OWNER BUG, reported from MiniPay: entered Bunker 1 floor 1 and could not move
+// OWNER BUG, reported by the owner: entered Bunker 1 floor 1 and could not move
 // out of the spawn area at all. Reproduced by flood-filling from the start
 // point across 60 generated floors — the stairs were unreachable on 5 of them.
 //
@@ -1946,7 +1946,7 @@ function openContainerWindow(decor){
 }
 // Non-item loot kinds that DO have a real sprite/icon representation (same
 // files used by renderStashPanel's addRow() for the persistent counters).
-// hp/xp/celo are instant stat pickups with no persistent icon, so those
+// hp/xp are instant stat pickups with no persistent icon, so those
 // stay text-only — only 'relic' gets an image here.
 const CONTAINER_LOOT_ICONS = { relic:'/sprites/items/relic.png', goldkey:'/sprites/items/golden_key.png', paper:'/sprites/items/paper.png' };
 
@@ -1981,7 +1981,7 @@ function renderContainerSlots(){
       // valid, un-taken loot. Give them the same colored-border treatment as
       // items so they visually read as pickups, and a plain emoji glyph
       // stands in for a real icon (no dedicated hp/xp sprite exists yet).
-      // (v40 — 'celo' entry removed along with the dead currency itself.)
+      // (v40 — the dead currency entry removed along with the currency itself.)
       const NON_ITEM_STYLE={
         hp:   { color:'#ef4444', glyph:nsIcon('heart') },
         xp:   { color:'#4ade80', glyph:'✦' },
@@ -1998,7 +1998,7 @@ function renderContainerSlots(){
         `<span class="inv-item-name"${styleCfg?` style="color:${styleCfg.color}"`:''}>+${s.amt}${typeof s.amt==='number'&&s.amt<1?'':''} ${labelMap[s.kind]||s.kind.toUpperCase()}</span>`;
     }
     // Item slots open the zoom overlay (TAKE button) for a deliberate,
-    // one-at-a-time confirmation. Non-item loot (hp/xp/celo/relic) has no
+    // one-at-a-time confirmation. Non-item loot (hp/xp/relic) has no
     // icon/name to zoom on, so those keep the old instant-take behavior.
     if(s.kind==='item'){
       row.addEventListener('click', ()=>openItemZoom({mode:'container-loot', slotId:s.slotId, item:s.item, qty:s.qty}));
@@ -2274,7 +2274,7 @@ async function submitVaultCode(){
 //
 // Three things it must say, because the player has no other way to learn any of
 // them: that they won, HOW MUCH and in WHAT, and that the money is already on
-// its way without a claim step. The last one matters most on MiniPay — a player
+// its way without a claim step. The last one matters most — a player
 // who does not know the transfer is automatic goes looking for a claim button
 // that does not exist, and concludes the game owes them money.
 //
@@ -2303,7 +2303,7 @@ function openVaultWinPopup(data){
     // is topped up" for EVERY failure, and the server had never once looked at
     // the pool. The week the owner hit it, the pool held 0.85 USDT against a
     // 0.05 reward — seventeen payouts' worth — and the real fault was a
-    // transaction Forno dropped before it reached the mempool. That sentence
+    // transaction the RPC dropped before it reached the mempool. That sentence
     // sent him, and then an agent, to the treasury for an hour.
     //
     // The server now checks each cause before naming it (see
@@ -2313,13 +2313,13 @@ function openVaultWinPopup(data){
     // every pending case.
     const why = (data && typeof data.message === 'string' && data.message) ? data.message : null;
     noteEl.innerHTML = paid
-      ? 'Sent straight to your wallet — <b>no claim needed</b>.<br>It may take a few seconds to show in MiniPay.'
+      ? 'Sent straight to your wallet — <b>no claim needed</b>.<br>It may take a few seconds to show in your wallet.'
       : (why || 'Your code was correct and the win is recorded. The payout retries by itself — nothing is lost.');
   }
   if(txEl){
     const hash = data && typeof data.txHash === 'string' && data.txHash;
     if(hash){
-      txEl.href = 'https://celoscan.io/tx/' + hash;
+      txEl.href = 'https://www.oklink.com/xlayer/tx/' + hash;
       txEl.classList.remove('hidden');
     } else {
       txEl.classList.add('hidden');
@@ -5179,7 +5179,7 @@ function eatFoodItem(itemId){
 //  - localStorage (instant, synchronous — what loadPersistedEquipment()
 //    actually reads, so equip feels instant with zero network wait)
 //  - Firebase, via /api/marketplace/equip (fire-and-forget) — this is what
-//    makes the choice survive a MiniPay uninstall/reinstall or a switch to
+//    makes the choice survive an app reinstall or a switch to
 //    a different device, the same way purchased items already do via
 //    marketplaceOwned. Without this second write, equip choices would only
 //    ever live in this one HP's local storage and reset to "nothing
@@ -5866,7 +5866,7 @@ let _energyGateBusy = false;
 function _enterBunkerFromDoor(act, isFirstBunker){
   showLoadingTransition(() => {
     Outdoor.exit();
-    // Carry loot + xp/level/kills/celo/hp/run-caps over from the bunker
+    // Carry loot + xp/level/kills/hp/run-caps over from the bunker
     // just cleared (see CARRY_OVER_SNAPSHOT above). depth/maxDepthReached
     // are force-overridden to 1 — every new bunker always starts on its
     // own floor 1 regardless of how deep the previous bunker went.
@@ -5996,7 +5996,7 @@ function onActBunkerCleared(){
     }catch(e){ /* storage off — the marketplace banner just won't show */ }
   }
   showLoadingTransition(() => {
-    // Snapshot everything (loot, xp/level/kills/celo/hp, run-caps) BEFORE
+    // Snapshot everything (loot, xp/level/kills/hp, run-caps) BEFORE
     // this bunker's G is discarded, so onOutdoorReachedDoor() can carry it
     // into the next bunker instead of starting that newGame() call from
     // scratch. Reuses getSaveSnapshot() — the exact same function "Save &

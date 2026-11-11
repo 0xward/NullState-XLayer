@@ -36,7 +36,7 @@ interface PlayerProfileCardProps {
 export default function PlayerProfileCard({ walletAddress: walletAddressProp }: PlayerProfileCardProps) {
   // /profile renders this with no prop, and nothing else ever set one — so the
   // card sat on "Connect wallet to load profile." forever, which is both a dead
-  // page and the exact copy MiniPay's zero-click-connect rule forbids. The
+  // page and the wrong prompt for a game that auto-connects. The
   // address now comes from the wallet the route already provides (app/profile
   // /layout.tsx wraps this in Web3Providers); the prop still wins when given.
   const wallet = useWallet()
@@ -87,8 +87,8 @@ export default function PlayerProfileCard({ walletAddress: walletAddressProp }: 
     <section className="rounded-xl border border-[rgba(255,255,255,0.15)] bg-black/40 p-5">
       <h2 className="font-mono text-sm uppercase tracking-[2px] text-null-white">Player Profile</h2>
 
-      {/* Never "Connect wallet" — inside MiniPay the address resolves on its
-          own, so that copy would only ever be wrong there. Until the wallet has
+      {/* Never "Connect wallet" — the wallet auto-connects on load, so that
+          copy would only ever be wrong here. Until the wallet has
           finished resolving this is honestly still loading; once it has and
           there is no address, the actionable next step is to open the game. */}
       {!walletAddress && !walletReady && (
@@ -114,8 +114,8 @@ export default function PlayerProfileCard({ walletAddress: walletAddressProp }: 
             <span className="text-null-white">Name:</span>{' '}
             {data.profile.nickname ?? maskAddress(data.profile.walletAddress)}
           </p>
-          {/* Masked, and secondary to the name — MiniPay's phone-first identity
-              rule bans a raw 0x… as the primary identifier. This printed the
+          {/* Masked, and secondary to the name — a raw 0x… must never be
+              the primary identifier. This printed the
               full address until now. */}
           <p>
             <span className="text-null-white">Wallet:</span> {maskAddress(data.profile.walletAddress)}

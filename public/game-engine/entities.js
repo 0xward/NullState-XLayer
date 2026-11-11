@@ -477,8 +477,8 @@ function drawLPCComposite(ctx, cx, cy, scale, dirIndex, frame, opts){
   // marketplace armor is equipped — the raw body sheet underneath is the
   // stock LPC "skin" layer (underwear only), so without this fallback the
   // char-select preview and every dungeon run before buying armor would
-  // render the character effectively undressed (punch list #9, MiniPay
-  // compliance blocker). LPC_ARMOR.base is render-only, never sold.
+  // render the character effectively undressed (punch list #9 compliance
+  // blocker). LPC_ARMOR.base is render-only, never sold.
   // v80: LPC monsters skip the armor stack entirely — their look is fully
   // baked into the body sheet (head included), and the LPC_ARMOR.base
   // fallback would dress an orc in the hero's shirt and pants.
@@ -636,7 +636,7 @@ class Player {
     this._lpcT = 0;
   }
   xpForNext(){ return this.level*200; }
-  // LEVEL = CRIT (owner/Celo-team decision). Level deliberately does NOT raise
+  // LEVEL = CRIT (owner decision). Level deliberately does NOT raise
   // Max HP (that's Armor's job) or base attack (that's Weapons' job) — instead
   // every level grows your Critical Hit chance, which multiplies whatever your
   // weapon already deals (crit = x2 damage, see applyHitToEnemy in game.js).

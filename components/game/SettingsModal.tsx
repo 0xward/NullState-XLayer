@@ -17,7 +17,8 @@ interface SessionStats {
 interface SettingsModalProps {
   open: boolean
   onClose: () => void
-  /** the raw address is NOT rendered (v75 MiniPay compliance removed it), but
+  /** the raw address is NOT rendered (removed in v75 — the address is never
+      shown in Settings), but
       it IS used to read the wallet's Season Pass status (TASK #7) shown below. */
   address?: string | null
   playerProfile: PlayerProfile | null
@@ -164,7 +165,7 @@ export default function SettingsModal({
           <div className="ns-settings-label">Season Pass</div>
           {!address ? (
             <p className="ns-settings-hint" style={{ marginTop: 6 }}>
-              Open NullState in MiniPay to mint a Season Pass.
+              Connect a wallet to mint a Season Pass.
             </p>
           ) : passLoading ? (
             <p className="ns-settings-hint" style={{ marginTop: 6 }}>Checking pass…</p>
@@ -221,8 +222,8 @@ export default function SettingsModal({
 
         {/* Wallet + Username */}
         <div className="ns-settings-section">
-          {/* v75 MiniPay compliance: raw wallet address removed from
-              Settings entirely (user decision) — no address shown here. */}
+          {/* v75: raw wallet address removed from Settings entirely (user
+              decision) — no address shown here. */}
           <div className="ns-settings-label">
             Username
           </div>
@@ -356,11 +357,10 @@ export default function SettingsModal({
           </a>
 
           {/*
-            Support / Terms / Privacy — required by MiniPay's Mini App
-            submission checklist to be reachable from *inside* the app, not
-            just the marketing landing page (/game never renders Footer.tsx).
-            This is the one place every player can reach via the Settings
-            button regardless of where they entered the app.
+            Support / Terms / Privacy must be reachable from *inside* the app,
+            not just the marketing landing page (/game never renders
+            Footer.tsx). This is the one place every player can reach via the
+            Settings button regardless of where they entered the app.
           */}
           <div className="ns-settings-legal-row">
             <a
@@ -394,28 +394,12 @@ export default function SettingsModal({
               <Image src="/footer-logos/github.png" alt="GitHub" width={26} height={26} />
             </a>
             <a
-              href="https://celoscan.io/address/0xe6c471dd3c715db8b10457113867885afa12ec13"
-              rel="noopener noreferrer"
-              aria-label="Celoscan"
-              className="ns-settings-footer-logo-link"
-            >
-              <Image src="/footer-logos/celoscan.png" alt="Celoscan" width={26} height={26} />
-            </a>
-            <a
               href="https://talent.app/~/projects/86c0509c-3167-46cd-8a58-36bb9c5b9777"
               rel="noopener noreferrer"
               aria-label="Talent Protocol"
               className="ns-settings-footer-logo-link"
             >
               <Image src="/footer-logos/talent-protocol.jpg" alt="Talent Protocol" width={26} height={26} />
-            </a>
-            <a
-              href="https://www.minipay.xyz"
-              rel="noopener noreferrer"
-              aria-label="MiniPay"
-              className="ns-settings-footer-logo-link"
-            >
-              <Image src="/footer-logos/minipay.png" alt="MiniPay" width={26} height={26} />
             </a>
           </div>
         </div>

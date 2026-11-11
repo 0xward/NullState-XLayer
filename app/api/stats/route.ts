@@ -5,8 +5,7 @@ import { GAME_CONFIG } from '@/lib/constants/game-config'
 import { tokenLabel } from '@/lib/constants/tokens'
 
 // Public, no-wallet stats endpoint powering /stats — the analytics/operational
-// visibility page MiniPay asks for in the listing readiness checklist
-// (`celopedia-skill` → minipay-requirements.md §8). Everything here is
+// visibility page. Everything here is
 // aggregated from the same Firebase RTDB the game already writes to; no new
 // tracking is introduced. Read-only, cached briefly at the edge.
 export const dynamic = 'force-dynamic'
@@ -19,7 +18,10 @@ function n(v: unknown): number {
   return typeof x === 'number' && isFinite(x) ? x : 0
 }
 
-type TokenCount = { USDM: number; USDC: number; USDT: number }
+/** Purchases counted per payment token. Keys are the recorded token symbols —
+// historic rows may carry symbols no longer accepted for new purchases, so
+// this stays open-ended rather than a fixed union. */
+type TokenCount = Record<string, number>
 
 export async function GET() {
   const db = getAdminDb()
@@ -84,7 +86,7 @@ export async function GET() {
     // before `usd` existed fall back to today's price, which is the best that
     // can be done for them — `volumeEstimated` says how many are guesses so the
     // number is never quoted as exact when it isn't.
-    const purchasesByToken: TokenCount = { USDM: 0, USDC: 0, USDT: 0 }
+    const purchasesByToken: TokenCount = { USDC: 0, USDT: 0 }
     let purchaseCount = 0
     let purchaseVolumeUsd = 0
     let volumeEstimated = 0
@@ -111,7 +113,7 @@ export async function GET() {
     const countSale = (kind: keyof typeof revenueByKind, rec: any, fallbackUsd: number | null) => {
       purchaseCount++
       const label = tokenLabel(rec.token) as keyof TokenCount
-      if (label in purchasesByToken) purchasesByToken[label]++
+      if (label) purchasesByToken[label] = (purchasesByToken[label] ?? 0) + 1
 
       let usd = n(rec.usd)
       if (!usd && fallbackUsd != null) { usd = fallbackUsd; volumeEstimated++ }

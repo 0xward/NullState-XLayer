@@ -2,7 +2,7 @@
  * webVitals.ts — report real-user load speed to PostHog.
  *
  * WHY THIS EXISTS
- * MiniPay's listing review grades load speed on the **75th percentile of real
+ * Load speed is graded on the **75th percentile of real
  * users**, not on a PageSpeed run. Those are different numbers measuring
  * different things: PageSpeed is one simulated device on one simulated network,
  * while the p75 is what most of your actual audience experiences — including

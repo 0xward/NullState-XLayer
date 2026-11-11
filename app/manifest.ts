@@ -2,16 +2,16 @@ import type { MetadataRoute } from 'next'
 
 // PWA / web-app manifest (served at /manifest.webmanifest via Next's
 // file-based metadata). Gives the game a name, icons and standalone display
-// when added to a home screen or opened as a MiniPay mini-app. Icons reuse
+// when added to a home screen. Icons reuse
 // the existing app art: /icon-192.png (downscaled from the 512) and the
 // original /icon-512.png. purpose:'any' only — the source icons are not
 // padded for maskable, so a maskable purpose would crop the artwork.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'NULL_STATE // Web3 RPG on Celo',
+    name: 'NULL_STATE // Web3 RPG on X Layer',
     short_name: 'NULL_STATE',
     description:
-      'A real-time dungeon crawler on Celo. Crack the vault, earn real USDT — playable inside MiniPay.',
+      'A real-time dungeon crawler on X Layer. Crack the vault, earn real USDT — playable free in your browser.',
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',

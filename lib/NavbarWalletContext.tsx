@@ -17,17 +17,13 @@ import { createContext, useContext } from 'react'
 export interface NavbarWalletState {
   isConnected: boolean
   address: string | null
-  isMiniPay: boolean
   error: string | null
-  addCashUrl: string | null
 }
 
 export const NavbarWalletContext = createContext<NavbarWalletState>({
   isConnected: false,
   address: null,
-  isMiniPay: false,
   error: null,
-  addCashUrl: null,
 })
 
 export function useNavbarWallet(): NavbarWalletState {

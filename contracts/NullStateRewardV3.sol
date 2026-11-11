@@ -10,7 +10,7 @@ pragma solidity ^0.8.20;
  * - Seasonal leaderboards and bonus rewards (top 3) — gated: claiming a
  *   rank bonus requires the user held an active Season Pass for that
  *   season (see claimSeasonBonus() below).
- * - Multi-token support (USDm, USDT, USDC, CELO)
+ * - Multi-token support (USDm, USDT, USDC, native token)
  * - Integration with PassSBTv3 for pass verification
  * - Backend-driven leaderboard updates via cron jobs
  *
@@ -42,23 +42,13 @@ pragma solidity ^0.8.20;
  * top-3 via updateLeaderboard + fund via depositSeasonBonus.
  *
  * WHY V2 EXISTED (inherited context):
- * The original NullStateReward.sol hardcoded USDC/USDT/CELO token
- * addresses that turned out to be WRONG (cross-checked against
- * docs.celo.org/tooling/contracts/token-contracts, the official Celo
- * docs site):
- *
- *   Token | was hardcoded (WRONG)                     | correct (docs.celo.org)
- *   USDC  | 0xeF63B1FdEfA2C442f41911160bCEFdaD5896e107 | 0xcebA9300f2b948710d2653dD7B07f33A8B32118C
- *   USDT  | 0x88eEc42eaf6E1b371f4a7e786fDDB2E782b72ccA | 0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e
- *   CELO  | 0x471ecE3750da237F93b8e339C536Cb1483c48E8f | 0x471EcE3750Da237f93B8E339c536989b8978a438
- *
- * (USDm was already correct: 0x765DE816845861e75A25fCA122bb6898B8B1282a).
- * Any recordBurn/depositWeeklyPool/depositSeasonBonus/claim call made
- * with the old USDC/USDT/CELO addresses would have interacted with the
- * wrong contract entirely (or, for CELO, an address that isn't actually
- * how native CELO is represented) — this is not upgradeable in place
- * (plain contract, no proxy), so v2 corrects the addresses at deploy
- * time instead of patching them post-hoc.
+ * The original NullStateReward.sol hardcoded token addresses that turned
+ * out to be WRONG — recordBurn / depositWeeklyPool / depositSeasonBonus /
+ * claim calls made with them would have interacted with the wrong contract
+ * entirely (or, for the native-token marker, an address that isn't how the
+ * native token is represented). This is not upgradeable in place (plain
+ * contract, no proxy), so v2 corrected the addresses at deploy time
+ * instead of patching them post-hoc.
  *
  * WHAT ELSE CHANGED FROM V1:
  * - RANK1_REWARD / RANK2_REWARD / RANK3_REWARD are no longer `constant`.
@@ -66,8 +56,7 @@ pragma solidity ^0.8.20;
  *   state variables (still defaulting to 20 / 5 / 3 USDm) with an
  *   owner-only setter (`setRankRewards`), so reward amounts can change
  *   for future seasons without a redeploy.
- * - Token addresses (usdmToken/usdtToken/usdcToken/celoToken) are now
- *   owner-settable via setUsdmToken/setUsdtToken/setUsdcToken/setCeloToken,
+ * - Token addresses are now owner-settable via the set*Token setters,
  *   in addition to being corrected at deploy time — so a future address
  *   mistake (or a token migration, as already happened once with
  *   cUSD -> USDm) doesn't require another full redeploy.
@@ -104,14 +93,13 @@ contract NullStateRewardV3 is Ownable {
     uint256 public constant TOTAL_SEASONS = 6;
 
     // ============ Supported Tokens ============
-    // Corrected addresses (cross-checked against docs.celo.org/tooling/
-    // contracts/token-contracts) — see "WHY V2 EXISTS" above for the
+    // Token addresses — see "WHY V2 EXISTS" above for the
     // wrong values these replace. No longer hardcoded-only: each has an
     // owner-only setter below in case of a future migration/correction.
     IERC20 public usdmToken = IERC20(0x765DE816845861e75A25fCA122bb6898B8B1282a);
     IERC20 public usdtToken = IERC20(0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e);
     IERC20 public usdcToken = IERC20(0xcebA9300f2b948710d2653dD7B07f33A8B32118C);
-    address public celoToken = 0x471EcE3750Da237f93B8E339c536989b8978a438; // Native CELO
+    address public celoToken = 0x471EcE3750Da237f93B8E339c536989b8978a438; // Native token marker
 
     IPassSBT public passSBT;
 
@@ -302,7 +290,7 @@ contract NullStateRewardV3 is Ownable {
     }
 
     /**
-     * @notice Update the native-CELO marker address (owner-only fix path)
+     * @notice Update the native-token marker address (owner-only fix path)
      */
     function setCeloToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
@@ -317,7 +305,7 @@ contract NullStateRewardV3 is Ownable {
      * @param _user User burning items
      * @param _itemCount Number of items burned
      * @param _burnValue Total value in wei of reward token
-     * @param _rewardToken Token used for reward (USDm, USDT, USDC, CELO)
+     * @param _rewardToken Token used for reward (USDm, USDT, USDC, or the native token)
      */
     function recordBurn(
         address _user,
@@ -652,6 +640,6 @@ contract NullStateRewardV3 is Ownable {
         }
     }
 
-    // ============ Receive CELO ============
+    // ============ Receive native token ============
     receive() external payable {}
 }

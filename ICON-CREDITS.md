@@ -36,7 +36,7 @@ Rendered as React components (`react-icons/gi`) in the UI, and as inline SVG in 
 | `GiSandsOfTime` | Craft countdown timer |
 | `GiPotionBall` | Buy Elixir |
 | `GiChainLightning` | "On-Chain" feature |
-| `GiSmartphone` | "Mobile-First via MiniPay" feature |
+| `GiSmartphone` | "Mobile-First" feature |
 | `GiChest` | "Treasure Vault Quest" feature |
 | `GiTrophy` | "Seasonal Leaderboard" feature |
 | `GiMedal` | Leaderboard rank 1/2/3 badges |

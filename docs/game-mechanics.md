@@ -203,7 +203,7 @@ with the week, along with everything else.
 A popup tells you exactly what you won — **the amount and the token** — and that
 it has **already been sent to your wallet**. There is no claim button, because
 there is nothing to claim: the transfer happens on-chain the moment your code is
-accepted. It can take a few seconds to appear in MiniPay.
+accepted. It can take a few seconds to appear in your wallet.
 
 The popup waits for you. Tap **CONTINUE** when you are ready; nothing disappears
 on a timer.

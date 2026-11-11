@@ -55,7 +55,7 @@ Each item's burn value is **randomized within its range**. Higher rarity = more 
 NullState Point can be spent in the **Marketplace** on lower-priced gear
 ($0.5–$2 items) via the **Swap** button (sits below the regular "Buy"
 button on eligible items). Pricier items ($3.5+) can only be bought with
-real USDM/USDC/USDT.
+real USDC/USDT0.
 
 | Item Price (USD) | NullState Point Required |
 |--------------------|-----------------------------|
@@ -139,13 +139,13 @@ not part of stablecoin earnings.
 ## 🪙 About the reward currency
 
 All game rewards (Vault Quest + seasonal bonuses) pay out in **USDT** — a
-dollar-pegged stablecoin on Celo. For *purchases* (Marketplace gear, Season
-Pass) you can pay with **USDM, USDC, or USDT**, whichever you hold the most
+dollar-pegged stablecoin on X Layer. For *purchases* (Marketplace gear, Season
+Pass) you can pay with **USDC or USDT0**, whichever you hold the most
 of — but what the game *pays you* is always USDT.
 
 - **Value**: 1 USDT ≈ $1 USD
-- **Network**: Celo Mainnet
-- **Wallet**: Transfer to any Celo-compatible wallet
+- **Network**: X Layer
+- **Wallet**: Transfer to any X Layer wallet
 - **Exchange**: Trade on a DEX (Uniswap, etc.)
 
 Your USDT earnings are **real, on-chain value**.

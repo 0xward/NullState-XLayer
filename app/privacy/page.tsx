@@ -5,7 +5,7 @@ import Footer from '@/components/ui/Footer'
 
 export const metadata = {
   title: 'Privacy Policy — NULL_STATE',
-  description: 'Privacy Policy for NULL_STATE, a Web3 RPG on Celo. Operated by 1892 Studio.',
+  description: 'Privacy Policy for NULL_STATE, a Web3 RPG on X Layer. Operated by 1892 Studio.',
 }
 
 const LAST_UPDATED = 'July 21, 2026'
@@ -44,11 +44,11 @@ export default function PrivacyPage() {
             </h2>
             <div className="pl-4">
               <p>
-                NULL_STATE is a Web3 dungeon-crawler RPG on the Celo blockchain, developed and
+                NULL_STATE is a Web3 dungeon-crawler RPG on the X Layer blockchain, developed and
                 operated by <strong className="text-null-white">1892 Studio</strong>. This Privacy
                 Policy explains what data we collect, how we use it, and your rights with respect
                 to that data. NULL_STATE is not affiliated with, endorsed by, or operated by
-                MiniPay, Opera, or the Celo Foundation.
+                OKX or the X Layer Foundation.
               </p>
             </div>
           </section>
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
                 </h3>
                 <p className="mb-3">
                   When you interact with NULL_STATE on-chain, the following data is written to the
-                  public Celo blockchain and is visible to anyone:
+                  public X Layer blockchain and is visible to anyone:
                 </p>
                 <ul className="flex flex-col gap-2 font-mono text-sm">
                   {[
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
                 </p>
                 <ul className="flex flex-col gap-2 font-mono text-sm">
                   {[
-                    'Guest progress — if you play outside MiniPay without a wallet, your run progress is kept locally under a randomly generated guest id',
+                    'Guest progress — if you play without a wallet, your run progress is kept locally under a randomly generated guest id',
                     'A local draft of your latest progress, used to avoid losing a run if the page reloads',
                     'Local preferences such as sound/mute and audio volume',
                   ].map((item) => (
@@ -258,8 +258,8 @@ export default function PrivacyPage() {
                   for details.
                 </li>
                 <li className="pl-4 relative before:content-[&apos;—&apos;] before:absolute before:left-0 before:text-null-green">
-                  <strong className="text-null-white">Celo Blockchain</strong> — All on-chain
-                  interactions are recorded on the public Celo network, which is operated by a
+                  <strong className="text-null-white">X Layer Blockchain</strong> — All on-chain
+                  interactions are recorded on the public X Layer network, which is operated by a
                   distributed set of validators. On-chain data is public and outside any single
                   party&apos;s control once confirmed.
                 </li>

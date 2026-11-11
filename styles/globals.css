@@ -503,7 +503,7 @@ body::before {
 
 /* Every interactive element gets a soft hover/press response. The press
    (scale-down) is the "every click feels alive" beat; keep it subtle so
-   MiniPay tap targets don't visually jump. */
+   mobile tap targets don't visually jump. */
 /* Only compositable properties are transitioned. This list used to also carry
    box-shadow, background-color, border-color and color; PageSpeed's
    "non-composited animation" audit named the sound button's `color` fade

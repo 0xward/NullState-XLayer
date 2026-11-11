@@ -5,7 +5,7 @@
 
 This file exists so the next person (or agent) working on NullState does not have
 to rediscover this, and — more importantly — does not "fix" it in a way that
-breaks the MiniPay listing. Read the whole thing before touching these routes.
+locks out players who cannot sign. Read the whole thing before touching these routes.
 
 ---
 
@@ -24,18 +24,12 @@ moment that changes. The trigger is written down below; do not wait to be told.
 ## Why it is not simply "add auth"
 
 The obvious fix — make the client sign a message and verify it server-side —
-**is not available here.** MiniPay does not implement `personal_sign` or
-`eth_signTypedData` at all. A signed-message scheme would work perfectly in a
-desktop browser and fail on every single MiniPay device, which is the entire
-target audience.
-
-`scripts/check-minipay-copy.js` fails CI on any `signMessage` / `signTypedData`
-call for exactly this reason. If you find yourself reaching for one, stop: the
-check is not in your way, it is telling you the approach is wrong.
+**does not work for every player here.** Wallet players can sign, but players
+who sign in with Google or as guests have no key to sign with at all, and they
+are a real part of the audience. A signed-message scheme would work perfectly
+for a wallet player and fail for every single one of them.
 
 Everything proposed below is signature-free on purpose.
-
----
 
 ## What is actually exposed, worst first
 
@@ -89,7 +83,7 @@ Do not wait for a specific date. Act when **any** of these becomes true:
 
 - The weekly Treasure Vault pool exceeds roughly **$50**, or
 - The season bonus pool exceeds roughly **$100**, or
-- The app is listed in MiniPay's discovery catalog (a much larger and much less
+- The game is featured in a large discovery catalog (a much larger and much less
   friendly audience than today's), or
 - `/stats` shows a leaderboard entry nobody can account for.
 
@@ -123,21 +117,7 @@ rejecting anything that is not physically reachable — a depth that arrived
 faster than the floors could load, a jump with no intervening floors. This is
 more work than (a) and it is the only thing that actually closes the hole.
 
-### c. ODIS phone verification, for cost rather than identity
-
-`celopedia-skill` → `odis-socialconnect.md`. MiniPay supports ODIS, and it is
-signature-free, so it is compatible with everything above.
-
-Be clear about what this buys: it does **not** authenticate a request. It makes
-each *identity* cost a real phone number, which is what makes farming a reward
-pool with a thousand fresh wallets uneconomic. Use it to gate reward
-eligibility, not as a login.
-
-Note the trade-off before committing: it adds a step to onboarding, in a market
-where every extra step costs players. Probably worth it for reward claims only,
-and not for ordinary play.
-
-### d. Nice to have
+### c. Nice to have
 
 - Cap total payouts per wallet per week server-side, so even a successful
   attack has a bounded ceiling.
@@ -147,7 +127,7 @@ and not for ordinary play.
 
 ## Things that will not work here
 
-- **Signed messages** — unsupported by MiniPay. See above.
+- **Signed messages as the only gate** — they work for wallet players, but Google/guest players have no key to sign with, so they cannot be the only gate for rewards. Any fix must stay signature-free for the non-wallet tiers.
 - **A shared secret in the client** — anything the browser can read, an attacker
   can read. `NEXT_PUBLIC_*` is not a secret; the PostHog project key in the
   bundle is public by design and should not be taken as precedent.
@@ -160,9 +140,6 @@ and not for ordinary play.
 
 ## Related
 
-- `MINIPAY-COMPLIANCE-CHECKLIST.md` — this is listed under "Still open" there.
-- `scripts/check-minipay-copy.js` — the CI check that will block a
-  signature-based fix.
 - `lib/vault-utils.ts` — attempt cap and week handling.
 - `app/api/marketplace/verify/route.ts` — the on-chain-anchored pattern worth
   copying where it fits.

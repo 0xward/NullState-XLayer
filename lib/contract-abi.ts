@@ -1,14 +1,19 @@
 /**
  * NullState Smart Contract ABIs & Addresses
  *
- * Contracts deployed on Celo Mainnet (chainId: 42220)
+ * Contracts deployed on X Layer Mainnet (chainId: 196)
  * - PassSBT       : NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS
  * - NullStateReward: NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS
  * - TreasureVault : NEXT_PUBLIC_TREASURE_VAULT_ADDRESS
+ *
+ * The hardcoded fallbacks below are the last-known deployment addresses.
+ * Set the env vars above to the live X Layer deployment addresses — if the
+ * contracts have not been deployed on X Layer mainnet yet, these fallbacks
+ * MUST be overridden before any on-chain write is attempted.
  */
 
 // ─── Contract Addresses ───────────────────────────────────────────────────────
-// Live & verified on Celo Mainnet. Env vars still override if set, but these
+// Live & verified on X Layer Mainnet. Env vars still override if set, but these
 // hardcoded values act as the source of truth so the app never silently falls
 // back to '0x'.
 
@@ -16,20 +21,20 @@
 // TWO confirmed bugs (see contracts/PASSBT_V2_UPGRADE_GUIDE.md):
 // (1) a lifetime-not-per-season mint lock, and (2) all 6 seasons were
 // initialized on-chain with 2024 timestamps instead of 2026 (confirmed via
-// CeloScan tx logs, session v34 — SeasonCreated event for 202607 shows
+// explorer tx logs, session v34 — SeasonCreated event for 202607 shows
 // startDate 1719792000 = 1 Jul 2024, not 2026). v1 has no admin function to
 // fix already-initialized season dates, so v1 was retired in favor of
-// PassSBTv2.sol (v2.1 — flexible USDm/USDC/USDT payment via backend-verified
+// PassSBTv2.sol (v2.1 — flexible USDC/USDT payment via backend-verified
 // mint, see contracts/PassSBTv2.sol for the full design writeup).
 //
-// PassSBTv2 (v2.1) redeployed to Celo Mainnet 2026-07-13 at the address
+// PassSBTv2 (v2.1) redeployed to X Layer Mainnet 2026-07-13 at the address
 // below, AFTER an earlier same-day deploy at
 // 0x390239A07616624b6521EC0022D348512d09053b was abandoned — that one was
 // compiled with a non-release solc build (npm resolved "^0.8.36" to an
 // unofficial/nightly-like build, `0.8.36+commit.8a079791`, which had no
-// matching entry in Celoscan's verified-compiler list, so it could never
+// matching entry in the explorer's verified-compiler list, so it could never
 // be verified). This address was compiled with solc 0.8.20+commit.a1b79de6
-// (the same official release used throughout this project) — Celoscan
+// (the same official release used throughout this project) — explorer
 // verification SUCCEEDED. The old 0x39023... address was never
 // initialized/used (no seasons, no mints) and is abandoned for good.
 //
@@ -45,9 +50,9 @@
 // 1. Set NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS in Vercel to this address
 //    (Fa needs to do this — I can't touch Vercel from here), redeploy.
 // 2. Test a paid mint end-to-end on mobile — ideally from a wallet holding
-//    USDC or USDT (not USDm), to actually confirm pickBestPaymentToken()
+//    USDC or USDT (not the older single-token path), to actually confirm pickBestPaymentToken()
 //    auto-detect picks the right token and /api/passsbt/mint's on-chain
-//    verification + backendMintPass() call both succeed for a non-USDm
+//    verification + backendMintPass() call both succeed for a non-USDC
 //    payment, not just the token everyone's been testing with so far.
 export const PASS_SBT_ADDRESS = (process.env
   .NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS ||
@@ -85,7 +90,7 @@ if (PASS_SBT_ADDRESS && RETIRED_PASS_SBT_ADDRESSES.includes(PASS_SBT_ADDRESS.toL
   console.error(msg)
 }
 
-// NullStateRewardV3 (deployed 2026-07, Celo mainnet). Replaces V2
+// NullStateRewardV3 (deployed 2026-07, X Layer mainnet). Replaces V2
 // (0x38F85c7cE8757E2940938D4e49bCDaE1CB5D475A) — see RETIRED list below.
 // V2 capped seasonId at 1..6 while PassSBTv3 + the app use YYYYMM, which
 // made the season-bonus reward impossible to deposit/claim; V3 relaxes that
@@ -140,12 +145,14 @@ if (
   )
 }
 
-// USDm (Mento Dollar, migrated from cUSD) — used for NULL_STRIKE fee & burn
-// rewards. Standard 18-decimal ERC20.
-export const USDM_ADDRESS = (process.env.NEXT_PUBLIC_USDM_ADDRESS ||
-  '0x765DE816845861e75A25fCA122bb6898B8B1282a') as `0x${string}`
+// USDC (native USDC on X Layer) — used for NULL_STRIKE fee & burn
+// rewards. Standard 6-decimal ERC20.
+export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS ||
+  '0xB6CEceAB302E2E4948951eE7843FC24E92933061') as `0x${string}`
 
-export const USDM_ABI = [
+// Generic ERC20 ABI (transfer / approve / balanceOf / decimals / allowance),
+// shared by every stablecoin payment in the app.
+export const ERC20_ABI = [
   {
     name: 'transfer',
     type: 'function',
@@ -192,7 +199,7 @@ export const USDM_ABI = [
   },
 ] as const
 
-// v2.1: pass price is now 0.30 USD, payable in whichever of USDm/USDC/USDT
+// v2.1: pass price is now 0.30 USD, payable in whichever of USDC/USDT
 // the connected wallet holds the most of (same MARKETPLACE_TOKENS pattern
 // as the Marketplace — see lib/constants/tokens.ts). The old fixed
 // v3 (PassSBTv3 redeploy): the hardcoded PASS_PRICE_USD = '0.3' constant
@@ -210,10 +217,10 @@ export const USDM_ABI = [
 // getBlock()/transaction shape for every chain viem ships, which drifts
 // whenever viem adds a new built-in chain (broke a `next build` this session
 // after viem 2.52.2 added "tempo") — a client typed to one specific chain
-// (e.g. celo) then stops structurally matching the generic type. Using a
+// (e.g. X Layer) then stops structurally matching the generic type. Using a
 // minimal structural type (just the one method this function actually calls)
 // sidesteps that entirely and matches the existing pattern already used by
-// pickBestFeeCurrency()/pickBestPaymentToken() in lib/constants/tokens.ts.
+// pickBestPaymentToken() in lib/constants/tokens.ts.
 
 /**
  * Read the current pass price from PassSBTv3 on-chain and return it as a
@@ -300,9 +307,9 @@ export const PASS_SBT_ABI = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
-  // v2.1: replaces v1/v2's mintPaidPass() (which pulled a hardcoded USDm
+  // v2.1: replaces v1/v2's mintPaidPass() (which pulled a hardcoded
   // amount on-chain). Payment now happens off-chain first (plain ERC20
-  // transfer() of 0.30 USD in USDm/USDC/USDT to TREASURY_WALLET, same as
+  // transfer() of 0.30 USD in USDC/USDT to TREASURY_WALLET, same as
   // Marketplace purchases), verified by app/api/passsbt/mint/route.ts,
   // which then calls this function using the backend signer. Restricted
   // onlyBackend on-chain — the frontend never calls this directly.

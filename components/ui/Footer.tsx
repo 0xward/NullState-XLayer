@@ -17,7 +17,7 @@ export default function Footer() {
       <div className="border-b border-[rgba(0,255,136,0.06)] mb-6 pb-4 ticker-wrap overflow-hidden">
         <div className="ticker-inner font-mono text-[9px] text-null-muted tracking-[3px] uppercase">
           {Array(3).fill(
-            '// NULLSTATE LIVE :: BLOCK #28,441,902 :: 247 PLAYERS ACTIVE :: NULL_STRIKE: FREE :: NEXT DROP: 47H :: NETWORK FEE: $0.001 :: BUILT ON CELO :: MINIPAY NATIVE :: REAL-TIME DUNGEON CRAWLER :: '
+            '// NULLSTATE LIVE :: BLOCK #28,441,902 :: 247 PLAYERS ACTIVE :: NULL_STRIKE: FREE :: NEXT DROP: 47H :: NETWORK FEE: $0.001 :: BUILT ON X LAYER :: REAL-TIME DUNGEON CRAWLER :: '
           ).join('')}
         </div>
       </div>
@@ -42,12 +42,12 @@ export default function Footer() {
         </ul>
 
         <div className="font-mono text-[10px] tracking-wider" style={{ color: 'rgba(42,74,53,0.6)' }}>
-          © 2025 NULLSTATE :: Operated by 1892 Studio :: BUILT ON CELO
+          © 2025 NULLSTATE :: Operated by 1892 Studio :: BUILT ON X LAYER
         </div>
       </div>
 
       <div className="mt-6 text-center font-mono text-[9px] tracking-[3px]" style={{ color: 'rgba(42,74,53,0.4)' }}>
-        BUILT ON CELO :: MINIPAY PROOF OF SHIP :: REAL-TIME DUNGEON CRAWLER
+        BUILT ON X LAYER :: PROOF OF SHIP :: REAL-TIME DUNGEON CRAWLER
       </div>
     </footer>
   )

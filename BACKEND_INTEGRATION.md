@@ -34,7 +34,7 @@ firebase-realtime-db/
 │       │   │       floorFound: number
 │       │   │   }
 │       │   ├── totalItemsCollected: number
-│       │   ├── totalBurnedUSDm: number
+│       │   ├── totalBurnedUSDC: number
 │       │   ├── hasGoldenKey: boolean
 │       │   ├── vaultCode: string (4-digit, if found Paper)
 │       │   ├── vaultOpened: boolean
@@ -44,7 +44,7 @@ firebase-realtime-db/
 │           └── {seasonId} (YYYYMM format, e.g., 202607)
 │               ├── username: string
 │               ├── walletAddress: string
-│               ├── totalUSDmEarned: number
+│               ├── totalUSDCEarned: number
 │               ├── totalItemsCollected: number
 │               ├── totalEnemiesKilled: number
 │               ├── daysActive: number
@@ -55,7 +55,7 @@ firebase-realtime-db/
 │               └── lastUpdatedAt: number
 │               └── allTime
 │                   ├── totalItemsEver: number
-│                   ├── totalUSDmEver: number
+│                   ├── totalUSDCEver: number
 │                   └── totalKillsEver: number
 ├── /vaultCodes
 │   └── {seasonId}
@@ -65,7 +65,7 @@ firebase-realtime-db/
 │           └── validUntil: number (timestamp, next Monday)
 ├── /leaderboards
 │   └── {seasonId}
-│       ├── rank1: { username, walletAddress, score, items, usdm, kills, daysActive }
+│       ├── rank1: { username, walletAddress, score, items, usdc, kills, daysActive }
 │       ├── rank2: { ... }
 │       ├── rank3: { ... }
 │       ├── top100: [ ... ]
@@ -139,7 +139,7 @@ interface BurnRequest {
   itemIds: string[]; // e.g., ["item1.png", "item2.png"]
   itemCount: number;
   totalValue: bigint; // in wei (18 decimals)
-  rewardToken: string; // "0x765DE816845861e75A25fCA122bb6898B8B1282a" (USDm)
+  rewardToken: string; // "0xB6CEceAB302E2E4948951eE7843FC24E92933061" (USDC)
   seasonId: number; // YYYYMM format
 }
 ```
@@ -152,7 +152,7 @@ interface BurnResponse {
   message: string;
   transactionHash: string; // from contract recordBurn()
   itemsDeleted: number;
-  totalValueBurned: string; // in USDm decimal format
+  totalValueBurned: string; // in USDC decimal format
 }
 ```
 
@@ -200,7 +200,7 @@ async function recordBurn(req: BurnRequest) {
 
   // 8. Update player stats
   await updatePlayerStats(req.userId, {
-    totalBurnedUSDm: increment(req.totalValue),
+    totalBurnedUSDC: increment(req.totalValue),
     lastBurnedAt: Date.now()
   });
 
@@ -209,7 +209,7 @@ async function recordBurn(req: BurnRequest) {
     burnId,
     transactionHash: tx.hash,
     itemsDeleted: req.itemIds.length,
-    totalValueBurned: formatUSDm(req.totalValue)
+    totalValueBurned: formatUSDC(req.totalValue)
   };
 }
 ```
@@ -281,7 +281,7 @@ async function submitVaultCode(req: VaultCodeRequest) {
   if (isCorrect) {
     await updatePlayerStats(req.userId, {
       vaultCodesCorrect: increment(1),
-      totalUSDmEarned: increment(1e18) // 1 USDm
+      totalUSDCEarned: increment(1e6) // 1 USDC
     });
   }
 
@@ -338,7 +338,7 @@ async function updateLeaderboard(seasonId: number) {
     username: data.seasonStats[seasonId].username,
     walletAddress: data.seasonStats[seasonId].walletAddress,
     seasonScore: data.seasonStats[seasonId].seasonScore,
-    usdm: data.seasonStats[seasonId].totalUSDmEarned,
+    usdc: data.seasonStats[seasonId].totalUSDCEarned,
     items: data.seasonStats[seasonId].totalItemsCollected,
     kills: data.seasonStats[seasonId].totalEnemiesKilled,
     daysActive: data.seasonStats[seasonId].daysActive,
@@ -452,7 +452,7 @@ async function generateWeeklyVaultCode(
 import { ethers } from "ethers";
 import { PassSBT__factory, NullStateReward__factory, TreasureVault__factory } from "../typechain";
 
-const provider = new ethers.JsonRpcProvider(process.env.CELO_RPC_URL);
+const provider = new ethers.JsonRpcProvider(process.env.XLAYER_RPC_URL);
 const signer = new ethers.Wallet(process.env.BACKEND_PRIVATE_KEY, provider);
 
 export const passSBT = PassSBT__factory.connect(
@@ -475,7 +475,7 @@ export const vaultContract = TreasureVault__factory.connect(
 
 ```bash
 # .env.local
-CELO_RPC_URL=https://forno.celo.org
+XLAYER_RPC_URL=https://rpc.xlayer.tech
 BACKEND_PRIVATE_KEY=0x...
 PASS_SBT_ADDRESS=0x...
 REWARD_CONTRACT_ADDRESS=0x...
@@ -554,7 +554,7 @@ interface ErrorResponse {
 
 - Estimate gas before transactions
 - Set gas limits with 20% buffer
-- Monitor CELO balance (keep > 1 CELO)
+- Monitor OKB balance (keep enough for gas)
 - Use `gasPrice` from chain, don't hardcode
 
 ---

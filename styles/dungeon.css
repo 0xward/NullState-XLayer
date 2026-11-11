@@ -930,7 +930,7 @@
 /* ══════════════════════════════════════════════════════════════════════
    WOODEN INVENTORY THEME  (Phase 3)
    Rich walnut/chestnut wood panels with brass trim + carved gold headers,
-   tuned to fit vertical MiniPay screens. Overrides the older parchment look
+   tuned to fit vertical phone screens. Overrides the older parchment look
    for #invPanel, #containerWindow and #itemZoom so all three read as one
    hand-carved wooden UI. Tabs (Loot/Food/Gear) + equipment rows below.
    ══════════════════════════════════════════════════════════════════════ */
@@ -952,7 +952,7 @@
     inset 0 2px 6px rgba(255,220,170,.10),
     inset 0 -18px 40px rgba(0,0,0,.45);
 }
-/* vertical-fit: taller, narrower panel for portrait MiniPay */
+/* vertical-fit: taller, narrower panel for portrait phones */
 .ns-game-root .inv-panel-inner{width:min(94vw,400px);max-height:min(88vh,700px);padding:18px 16px;}
 
 /* carved gold headers */

@@ -6,7 +6,7 @@ import { MusicButton, useMusic } from '@/components/MusicController'
 // ─── Landing hero ────────────────────────────────────────────────────────────
 // Rebuilt 2026-07: the previous version read as a token/trading landing page —
 // a neon glow orb over a data grid, a wordmark in a geometric sans, and a row of
-// badges saying EARN REAL USDT / CELO MAINNET / MINIPAY NATIVE. Every one of
+// badges saying EARN REAL USDT / X LAYER MAINNET. Every one of
 // those is a fintech signal. Someone arriving from a share link had no way to
 // tell this was a pixel dungeon crawler until they pressed a button.
 //
@@ -134,7 +134,7 @@ export default function HeroSection() {
               the row wall to wall, which is what made them read as heavy slabs
               rather than a choice.
               The HEIGHT stays at 48 and does not go lower: that is the tap
-              target floor (WCAG 2.5.5, and MiniPay's own guidance), and this is
+              target floor (WCAG 2.5.5), and this is
               a game whose audience plays one-handed on cheap Android hardware.
               Making a button look lighter by making it harder to hit is not a
               trade worth taking — the width and the border weight carry it. */}
@@ -177,7 +177,7 @@ export default function HeroSection() {
           className="font-mono uppercase mt-7"
           style={{ fontSize: 9, letterSpacing: '2px', color: '#4e6b5e', animation: 'fadeUp .6s 1s both' }}
         >
-          Free to play · Built for MiniPay
+          Free to play · Built for X Layer
         </p>
       </div>
     </section>

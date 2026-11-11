@@ -65,7 +65,7 @@ export default function ReferralScreen({ onBack, address }: ReferralScreenProps)
   useEffect(() => { load() }, [load])
 
   const shareUrl = code && typeof window !== 'undefined' ? `${window.location.origin}/game?ref=${code}` : ''
-  const shareText = `Join me in NULL_STATE — a dungeon crawler on MiniPay. Use my link and we both earn: ${shareUrl}`
+  const shareText = `Join me in NULL_STATE — a dungeon crawler on X Layer. Use my link and we both earn: ${shareUrl}`
 
   const copyLink = async () => {
     try {

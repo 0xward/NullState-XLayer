@@ -133,10 +133,10 @@ for (const m of wpnBlock.matchAll(/^\s{2}([a-z_]+):\s*\{ src:`\$\{NS_WPN\}\/([a-
   if (!exists(`/sprites/weapons/${m[2]}`)) note('missing weapon sprite', m[2])
 }
 
-// ── 6. one place decides the Celo RPC ────────────────────────────────────────
-// The endpoint was configured in six places. Five read CELO_RPC_URL then
-// NEXT_PUBLIC_CELO_RPC; the sixth — wagmi's transport, the one every player's
-// browser uses — hardcoded Forno. So setting the variable moved the server and
+// ── 6. one place decides the X Layer RPC ────────────────────────────────────
+// The endpoint was configured in six places. Five read XLAYER_RPC_URL then
+// NEXT_PUBLIC_XLAYER_RPC; the sixth — wagmi's transport, the one every player's
+// browser uses — hardcoded the public RPC. So setting the variable moved the server and
 // left the browser behind, which is the half that generates the load. A config
 // knob that silently only half-works is worse than no knob.
 const rpcHosts = []
@@ -146,29 +146,27 @@ for (const dir of ['app', 'lib', 'hooks']) {
   for (const file of walk(abs)) {
     if (!/\.(ts|tsx)$/.test(file)) continue
     const rel = path.relative(ROOT, file)
-    if (rel === path.join('lib', 'celoRpc.ts')) continue // the one place allowed to name it
+    if (rel === path.join('lib', 'xlayerRpc.ts')) continue // the one place allowed to name it
     const src = fs.readFileSync(file, 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|[^:])\/\/[^\n]*/g, '$1')
-    if (/forno\.celo\.org|NEXT_PUBLIC_CELO_RPC|CELO_RPC_URL/.test(src)) rpcHosts.push(rel)
+    if (/rpc\.xlayer\.tech|testrpc\.xlayer\.tech|NEXT_PUBLIC_XLAYER_RPC|XLAYER_RPC_URL/.test(src)) rpcHosts.push(rel)
   }
 }
 for (const f of rpcHosts) {
-  note('RPC endpoint set outside lib/celoRpc.ts', f)
+  note('RPC endpoint set outside lib/xlayerRpc.ts', f)
 }
 
 // ── 7. one place decides the public URL ──────────────────────────────────────
 // Same failure as the RPC, with a worse blast radius. The production URL was
-// written out by hand in the metadata base, robots.txt, the sitemap, the
-// server-side attribution hostname and the treasury CLI. Moving to a real
-// domain — which is exactly what the Celo review asked for — means every one of
-// those has to change together.
+// written out by hand in the metadata base, robots.txt, the sitemap and
+// the treasury CLI. Moving to a real domain means every one of those has
+// to change together.
 //
-// The attribution hostname is the one that cannot be repaired after the fact:
-// the Celo app code is a hash of the hostname, so a client on the new domain
-// and a server still holding the old one file as two unrelated apps, and
-// attribution is not backfillable. Half the project's on-chain history would be
-// stranded under a dead URL, permanently.
+// The public URL is the one value that cannot be repaired after the fact:
+// clients and servers that disagree about it file as two unrelated apps, and
+// on-chain history recorded under the old one is stranded under a dead URL,
+// permanently.
 const urlHosts = []
 for (const dir of ['app', 'lib', 'hooks', 'components', 'scripts']) {
   const abs = path.join(ROOT, dir)

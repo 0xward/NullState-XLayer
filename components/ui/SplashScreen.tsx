@@ -41,7 +41,7 @@ const SEEN_KEY = 'ns-splash-seen'
  * exactly where 3G and Data Saver are common, so this is the common case
  * there, not an edge case.
  *
- * navigator.connection is Chromium-only, which is fine: MiniPay is a Chromium
+ * navigator.connection is Chromium-only, which is fine: most in-app browsers are Chromium
  * WebView. Anywhere it is missing, the splash shows as normal.
  */
 function connectionTooSlowForSplash(): boolean {

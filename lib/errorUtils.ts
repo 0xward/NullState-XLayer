@@ -2,33 +2,12 @@
 
 import { BaseError, InsufficientFundsError, UserRejectedRequestError } from 'viem'
 
-// MiniPay Add Cash deeplink.
-//
-// Re-verified 2026-07-26 against the canonical reference,
-// https://docs.minipay.xyz/technical-references/deeplinks.html, which states:
-// "All deep links use the host link.minipay.xyz". Add Cash is documented as
-// `https://link.minipay.xyz/add_cash[?tokens=XXX,YYY,ZZZ]`.
-//
-// This corrects an earlier value of https://minipay.opera.com/add_cash. The
-// comment that accompanied it claimed link.minipay.xyz was MiniPay's unrelated
-// P2P "Cash Links" feature — that is wrong; the deeplinks page above publishes
-// link.minipay.xyz/add_cash as the Add Cash screen and documents no
-// minipay.opera.com host at all.
-//
-// `tokens` is filtered by the client (unsupported codes are skipped), so
-// naming all three we accept just means the top-up screen opens on the set the
-// game can actually take. Codes are uppercase per the docs; USDM is the Mento
-// dollar. The docs page is titled "Deeplinks (available soon)", so treat this
-// as best-effort: it is a plain <a href>, and a MiniPay build that does not yet
-// handle it simply does nothing rather than breaking the purchase flow.
-export const MINIPAY_ADD_CASH_URL = 'https://link.minipay.xyz/add_cash?tokens=USDT,USDC,USDM'
-
 export interface UserFriendlyWalletError {
   message: string
   insufficientFunds: boolean
 }
 
-// Punch list #3 — sendTx/payUsdmFee/buyMarketplaceItem in WalletProvider.tsx
+// Punch list #3 — sendTx/payStableFee/buyMarketplaceItem in WalletProvider.tsx
 // were computing a friendly message via getUserFriendlyError() but then
 // re-throwing the ORIGINAL raw error (`throw e`), so any caller reading
 // `e.message` directly (e.g. MarketplaceScreen.tsx's handleBuy/handleSwap)
@@ -37,7 +16,7 @@ export interface UserFriendlyWalletError {
 // result in a real Error so `.message` is always the clean, human string —
 // the raw error is preserved on `.cause` for console/debugging, and
 // `insufficientFunds` stays available for callers that want to branch on it
-// (e.g. show the MiniPay "Add Cash" link) without re-deriving it themselves.
+// without re-deriving it themselves.
 export class WalletFriendlyError extends Error {
   insufficientFunds: boolean
   constructor(friendly: UserFriendlyWalletError, cause: unknown) {
@@ -98,7 +77,7 @@ export function getUserFriendlyError(error: unknown): UserFriendlyWalletError {
 
   // Plain ERC20 revert reason ("ERC20: transfer amount exceeds balance"),
   // surfaced e.g. by PassSBT.mintPaidPass()'s transferFrom() when the
-  // wallet doesn't hold enough USDm. This is a token-balance shortfall,
+  // wallet doesn't hold enough USDC. This is a token-balance shortfall,
   // not a native-gas shortfall, but it's still "insufficient funds" from
   // the player's point of view, so it gets the same friendly message.
   if (/transfer amount exceeds balance/.test(text)) {

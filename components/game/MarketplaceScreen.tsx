@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useWallet, CELO_CHAIN_ID } from '@/lib/WalletProvider'
+import { useWallet } from '@/lib/WalletProvider'
 import WrongNetworkBar from './WrongNetworkBar'
 import { GiCrossedSwords, GiCheckedShield, GiMagnifyingGlass } from 'react-icons/gi'
 import { pickBestPaymentToken, readStablecoinBalances } from '@/lib/constants/tokens'
@@ -18,21 +18,21 @@ function ownedKey(addr?: string) {
 
 export default function MarketplaceScreen({ onBack, address }: MarketplaceScreenProps) {
   const wallet = useWallet()
-  const { buyMarketplaceItem, insufficientFunds, addCashUrl, isGuest } = wallet
+  const { buyMarketplaceItem, insufficientFunds, isGuest } = wallet
   // From the wallet bridge, not wagmi's usePublicClient(): wagmi now mounts
   // beside the app rather than around it (lib/walletBridge.tsx), so this
   // screen is not inside WagmiProvider and calling its hooks here would throw.
   // Null until wagmi has loaded; the effect below already handles that.
   const publicClient = wallet.publicClient
-  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDm')
-  // The same three balances pickBestPaymentToken reads, kept rather than
+  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDC')
+  // The same balances pickBestPaymentToken reads, kept rather than
   // discarded — so the selector can show what the player holds instead of
   // making them discover it by failing a purchase.
   const [stableBalances, setStableBalances] = useState<Record<MarketplaceTokenSymbol, number | null>>(
-    { USDm: null, USDC: null, USDT: null },
+    { USDC: null, USDT: null },
   )
   // Flexible stablecoin (Phase 2): default the "Pay with" token to whichever of
-  // USDm/USDC/USDT the wallet holds the most of, so a player isn't forced to
+  // USDC/USDT the wallet holds the most of, so a player isn't forced to
   // top up a specific coin. The manual selector below still lets them switch;
   // once they do, we stop auto-overriding their choice.
   const manualTokenRef = useRef(false)
@@ -366,7 +366,7 @@ export default function MarketplaceScreen({ onBack, address }: MarketplaceScreen
         </header>
 
         {/* Connected but on the wrong chain — see WrongNetworkBar. Renders
-            nothing at all on Celo, and cannot appear inside MiniPay. */}
+            nothing at all on X Layer. */}
         <WrongNetworkBar />
 
         {/* ARMORY TRIAL picker — shows once: Act 1 cleared + never granted.
@@ -412,7 +412,7 @@ export default function MarketplaceScreen({ onBack, address }: MarketplaceScreen
             earned NullState Point for basic gear still works while playing. */}
         {isGuest && (
           <div className="mb-4 rounded-lg border border-[#7a4f24]/50 bg-[#7a4f24]/10 p-3 font-mono text-[10px] leading-relaxed text-[#e8c37a]">
-            You’re playing as a guest. Buying with USDM/USDC/USDT needs a connected wallet — but you can still <span className="text-[#7ef0a6]">Swap ⇄ Point</span> for basic gear using Point you earn by burning loot.
+            You’re playing as a guest. Buying with USDC/USDT needs a connected wallet — but you can still <span className="text-[#7ef0a6]">Swap ⇄ Point</span> for basic gear using Point you earn by burning loot.
           </div>
         )}
 
@@ -448,7 +448,7 @@ export default function MarketplaceScreen({ onBack, address }: MarketplaceScreen
             ))}
           </div>
           <p className="mt-2 font-mono text-[9px] leading-relaxed text-[#9c7a4f]">
-            Paid on Celo · MiniPay covers the network fee automatically. Purchases are permanent and equippable in-game.
+            Paid on X Layer · gas is paid in OKB. Purchases are permanent and equippable in-game.
           </p>
         </div>
 
@@ -459,15 +459,10 @@ export default function MarketplaceScreen({ onBack, address }: MarketplaceScreen
             : 'border-[#7a4f24]/50 bg-[#7a4f24]/10 text-[#e8c37a]'
           }`}>
             <div>{msg.text}</div>
-            {msg.kind === 'err' && insufficientFunds && addCashUrl && (
-              <a
-                href={addCashUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-[#f2cd82] underline underline-offset-2"
-              >
-                Deposit in MiniPay →
-              </a>
+            {msg.kind === 'err' && insufficientFunds && (
+              <p className="mt-2 text-[#f2cd82]">
+                Top up USDC/USDT — and a little OKB for gas — in your wallet, then try again.
+              </p>
             )}
           </div>
         )}

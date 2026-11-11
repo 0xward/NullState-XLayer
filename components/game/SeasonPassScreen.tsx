@@ -182,29 +182,23 @@ export default function SeasonPassScreen({ onBack, address }: SeasonPassScreenPr
           the current month can be minted.
         </p>
 
-        {/* Not "connect your wallet": inside MiniPay the address arrives with
-            no interaction, so a connect prompt is only ever shown to someone it
-            cannot help. Naming MiniPay is the actionable step. */}
+        {/* Not "connect your wallet": the wallet auto-connects on load, so a
+            connect prompt is only ever shown to someone it cannot help. */}
         <WrongNetworkBar />
 
         {!address && (
           <div className="mb-6 rounded border border-[#e8bd6f]/40 bg-[#e8bd6f]/10 p-3 text-sm text-[#f2cd82] font-mono">
-            Open NullState in MiniPay to mint a pass.
+            Connect a wallet to mint a pass.
           </div>
         )}
 
         {mintError && (
           <div className="mb-4 rounded border border-[rgba(255,34,68,0.35)] bg-[rgba(255,34,68,0.08)] p-3 text-xs text-null-red font-mono break-words">
             <div>{mintError}</div>
-            {passSBT.insufficientFunds && passSBT.addCashUrl && (
-              <a
-                href={passSBT.addCashUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-block text-[#f2cd82] underline underline-offset-2"
-              >
-                Deposit in MiniPay →
-              </a>
+            {passSBT.insufficientFunds && (
+              <p className="mt-2 text-[#f2cd82]">
+                Top up USDC/USDT — and a little OKB for gas — in your wallet, then try again.
+              </p>
             )}
           </div>
         )}
@@ -294,7 +288,7 @@ export default function SeasonPassScreen({ onBack, address }: SeasonPassScreenPr
           )}
 
           {!address ? (
-            <div className="font-mono text-[11px] text-[#9c7a4f]">Open NullState in MiniPay to claim daily perks.</div>
+            <div className="font-mono text-[11px] text-[#9c7a4f]">Connect a wallet to claim daily perks.</div>
           ) : !perks?.hasPass ? (
             <div className="font-mono text-[11px] text-[#9c7a4f]">Mint the active-season pass to unlock daily claims.</div>
           ) : (

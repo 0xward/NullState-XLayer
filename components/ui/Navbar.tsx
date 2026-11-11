@@ -67,12 +67,12 @@ export default function Navbar() {
       </motion.div>
 
       {/* Center status.
-          This used to read "CELO_MAINNET :: BLOCK #28,441,902", ticking up
-          beside a live-looking pulse dot. It was FAKE — the number was
+          This used to read a fake chain ticker with a hardcoded block height,
+          ticking up beside a live-looking pulse dot. It was FAKE — the number was
           hardcoded and incremented by Math.random() every five seconds; it
           never touched an RPC. Two separate problems with that: a fabricated
           on-chain readout presented as live data is not something a project
-          asking for a Celo listing should ship, and a scrolling block height is
+          asking for a listing should ship, and a scrolling block height is
           the single strongest "this is a trading dashboard" cue on a page whose
           job is to say "this is a pixel dungeon crawler".
           Replaced with something true and on-message. The chain is still named
@@ -104,27 +104,16 @@ export default function Navbar() {
             <div className="flex items-center gap-2 font-mono text-[11px] border border-[rgba(0,255,136,0.3)] px-4 py-2 text-null-green">
               <div className="w-1.5 h-1.5 rounded-full bg-null-green animate-pulse" />
               <span>{maskAddress(wallet.address)}</span>
-              {wallet.isMiniPay && <span className="text-[8px] text-null-muted ml-1">MiniPay</span>}
             </div>
             {wallet.error && (
               <div className="flex items-center gap-2 text-[10px] font-mono text-null-amber">
                 <span>{wallet.error}</span>
-                {wallet.addCashUrl && (
-                  <a href={wallet.addCashUrl} className="text-null-green no-underline underline-offset-2 hover:underline">
-                    Deposit
-                  </a>
-                )}
               </div>
             )}
           </div>
         ) : wallet.error ? (
           <div className="flex items-center gap-2 text-[10px] font-mono text-null-red">
             <span>{wallet.error}</span>
-            {wallet.addCashUrl && (
-              <a href={wallet.addCashUrl} className="text-null-green no-underline underline-offset-2 hover:underline">
-                Deposit
-              </a>
-            )}
           </div>
         ) : null}
 
@@ -158,22 +147,12 @@ export default function Navbar() {
               {wallet.error && (
                 <div className="flex items-center gap-2 text-[10px] font-mono text-null-amber">
                   <span>{wallet.error}</span>
-                  {wallet.addCashUrl && (
-                    <a href={wallet.addCashUrl} className="text-null-green no-underline underline-offset-2 hover:underline">
-                      Deposit
-                    </a>
-                  )}
                 </div>
               )}
             </div>
           ) : wallet.error ? (
             <div className="flex items-center gap-2 text-[10px] font-mono text-null-red">
               <span>{wallet.error}</span>
-              {wallet.addCashUrl && (
-                <a href={wallet.addCashUrl} className="text-null-green no-underline underline-offset-2 hover:underline">
-                  Deposit
-                </a>
-              )}
             </div>
           ) : null}
           <a href="/game" onClick={() => setMenuOpen(false)}

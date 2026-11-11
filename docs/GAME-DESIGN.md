@@ -33,12 +33,12 @@ exactly how `game-config.ts` became a liability.
 
 ## 1. What NullState is
 
-> A short-session mobile dungeon crawler on Celo where **playing this week
+> A short-session mobile dungeon crawler on X Layer where **playing this week
 > is what earns you real USDT at the end of it.**
 
 Three words that decide every argument:
 
-**Short.** One raid is 3–10 minutes. MiniPay players are on mid-range
+**Short.** One raid is 3–10 minutes. Players are on mid-range
 phones, often on the move. If a loop needs a 20-minute sitting, it is
 wrong for this audience regardless of how good it is.
 
@@ -54,7 +54,7 @@ than the *size* of it.
 - **Not a story game you finish.** The story is the wrapper, not the goal.
 - **Not a daily-payout game.** Daily play pays *progress*. Money is weekly.
 - **Not an idle/tap game.** There is real combat under this. Tap-loops fade;
-  the depth is the moat (see `GROWTH-BLUEPRINT.md`, market grounding).
+  the depth is the moat.
 
 ---
 
@@ -286,8 +286,7 @@ otherwise is how a target ends up wrong in the first place.
 
 Rewards are Glitch Shards and NullState Point, credited **the instant a bar
 fills** — no claim step, matching how burning already works. Deliberately
-**not** USDT (owner decision, consistent with the cancelled daily drip in
-`GROWTH-BLUEPRINT.md` §1A). Both currencies already exist and are off-chain,
+**not** USDT (owner decision, consistent with the cancelled daily drip). Both currencies already exist and are off-chain,
 so the feature costs the operator nothing.
 
 **On trust.** Container progress is credited server-side off the same call that
@@ -534,7 +533,7 @@ any of them:
 | | Why |
 |---|---|
 | **How much, and in what** | the largest text on the screen |
-| **It is already sent, no claim** | the MiniPay failure mode is hunting for a claim button that does not exist and concluding you were not paid |
+| **It is already sent, no claim** | the failure mode is hunting for a claim button that does not exist and concluding you were not paid |
 | **It may take a few seconds** | so a wallet that has not updated yet is not read as a loss |
 
 **Nothing auto-dismisses.** CONTINUE is what ends the bunker now, so the number
@@ -675,7 +674,7 @@ together without a second knob.
 | 5 · The Last Light | ▰▰▰▰▰ | 2.00× | T3 | +65% |
 
 Measured after: 1.65× the area of bunker 1, 1.55× the enemies. Deliberately
-modest — a MiniPay session is 3–10 minutes on a mid-range phone, so **bunker 1
+modest — a session is 3–10 minutes on a mid-range phone, so **bunker 1
 stays the short option**. That is the point of an axis rather than a global
 difficulty bump.
 
@@ -696,7 +695,7 @@ any number in the constants disagrees. The engine stays the source of truth.
 > **Open question, still open:** how long is one bunker in *real play*? The
 > sandbox can measure rooms and enemies, not a person's minutes. If a full
 > 5-floor clear of Bunker 5 runs past ~10 minutes, add a "raid one floor and
-> extract" option — that is the shape a MiniPay session actually has.
+> extract" option — that is the shape a session actually has.
 
 > **A bug this surfaced.** `apply()` in `WorldMapHub` runs twice — once from the
 > instant localStorage draft, again when the Firestore copy lands — and its
@@ -737,7 +736,7 @@ and the vault fragment is credited on the first open only.
 
 ## 7c. Fixed: a floor could be generated with no way out
 
-**`[TODAY]`.** Reported from a real MiniPay session: entered Bunker 1 floor 1,
+**`[TODAY]`.** Reported from a real play session: entered Bunker 1 floor 1,
 could not move out of the spawn area, could not test anything else.
 
 The cause is geometric, not a placement mistake. A corridor is one tile
@@ -1216,16 +1215,15 @@ script's own argument validation instead of only the first.
 1–5 Point. Nothing in the engine, the Rewards screen or the burn route filters
 them. Table corrected.
 
-**4. Two docs disagreed on the season token.** §3 said USDm; `OWNER-RUNBOOK.md`
-and `rewards-system.md` both say USDT, and the runbook is what gets executed.
-§3 corrected, and the token is now a named constant the generated command reads.
+**4. The season token is USDT.** §3, `OWNER-RUNBOOK.md`
+and `rewards-system.md` agree, and the token is a named constant the generated command reads.
 
 **5. The runbook did not know about its own automation.** `OWNER-RUNBOOK.md`
 still said "work out the top 3 and run these two commands". Rewritten around
 `/api/season/status`, the `/stats` indicator and the mark-paid call.
 
 **Also deleted:** 8 files, 519 lines, all verified unreferenced —
-`USDmDisplay`, `GameUI`, `TokenBalanceWidget`, `CustomCursor`,
+`USDCDisplay`, `GameUI`, `TokenBalanceWidget`, `CustomCursor`,
 `LiveStatsTicker`, `SectionDivider`, `useScrollReveal`, and
 `/api/vault/status`, which had no caller left. Lint baseline 34 → 33.
 
@@ -1296,7 +1294,7 @@ time.
    it; effort must guarantee it. §5.1 is the pattern.
 
 5. **Sessions stay short.** If a change makes the minimum useful session
-   longer than ~5 minutes, it is wrong for MiniPay.
+   longer than ~5 minutes, it is wrong for this game.
 
 6. **Content does not fix a missing loop.** More bunkers, monsters and
    weapons will not answer "why come back tomorrow." Content is consumed;
@@ -1309,7 +1307,7 @@ time.
 
 ## 11. Build order
 
-**Before the MiniPay listing — required**
+**Before launch — required**
 1. ~~§5.1 Vault Fragments~~ — **shipped**
 2. ~~§7 Bunker raids~~ — **shipped**
 3. ~~§5.5 Daily status on the map~~ — **shipped** (absorbed §5.4)
@@ -1334,13 +1332,12 @@ time.
 | 2026-07-30 | Paper/Key guaranteed by effort (fragments); luck stays as a shortcut | Owner |
 | 2026-07-30 | Raiding a cleared bunker costs 1 energy | Owner |
 | 2026-07-30 | Daily rewards pay progress only; USDT stays weekly | Owner |
-| 2026-07-22 | Daily USDT drip cancelled — no capital pre-revenue | Owner (`GROWTH-BLUEPRINT.md` §1A) |
+| 2026-07-22 | Daily USDT drip cancelled — no capital pre-revenue | Owner |
 
 ---
 
 ## Related documents
 
-- [`GROWTH-BLUEPRINT.md`](./GROWTH-BLUEPRINT.md) — acquisition, referrals, endgame
 - [`game-mechanics.md`](./game-mechanics.md) — player-facing rules
 - [`treasure-vault-quest.md`](./treasure-vault-quest.md) — vault specifics
 - [`rewards-system.md`](./rewards-system.md) — payout mechanics

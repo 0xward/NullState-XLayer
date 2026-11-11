@@ -428,7 +428,7 @@ export default function Leaderboard({
         {/* Footer info */}
         <div className="mt-10 sm:mt-12 pt-6 sm:pt-8 border-t border-[rgba(0,255,136,0.2)]">
           <p className="text-null-muted font-mono text-[9px] sm:text-[10px] tracking-[1px] sm:tracking-[2px] uppercase">
-            // data fetched from celoscan registry
+            // data fetched from the on-chain registry
             <br />
             total players: {displayEntries.length}
           </p>

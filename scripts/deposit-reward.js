@@ -33,10 +33,10 @@
  *
  *   status                read-only overview of both contracts
  *
- * DECIMALS — the whole point of this tool. USDT and USDC on Celo are
- * 6-decimal; USDm is 18-decimal. Every --amount you pass is in HUMAN
- * DOLLARS (e.g. --amount 10 = $10); the script scales to the token's real
- * base units so you never hand-write wei or accidentally send 1e18 USDT
+ * DECIMALS — the whole point of this tool. USDC and USDT0 on X Layer are
+ * 6-decimal; the native token (OKB) is 18-decimal. Every --amount you pass is
+ * in HUMAN DOLLARS (e.g. --amount 10 = $10); the script scales to the token's
+ * real base units so you never hand-write wei or accidentally send 1e18 USDT0
  * ($1,000,000,000,000). It also warns if vaultReward looks like it was left
  * in 18-decimal format while the payout token is 6-decimal.
  *
@@ -48,22 +48,25 @@
  *
  * USAGE
  *   node scripts/deposit-reward.js <command> [flags]
- *   Flags: --token USDT|USDm|USDC  --amount <dollars>  --season <1..6>
+ *   Flags: --token USDC|USDT0  --amount <dollars>  --season <YYYYMM>
  *          --r1 <dollars> --r2 <dollars> --r3 <dollars>
- *          --fee CELO|USDT|USDm|USDC (gas token, default CELO)
+ *          --testnet (X Layer testnet 1952 instead of mainnet 196)
  *          --yes (skip confirm)   --dry-run (simulate, no send)   --rpc <url>
  *
  * EXAMPLES
  *   node scripts/deposit-reward.js status
- *   node scripts/deposit-reward.js vault-set-token --token USDT
- *   node scripts/deposit-reward.js vault-reward   --token USDT --amount 0.5
- *   node scripts/deposit-reward.js vault-deposit  --token USDT --amount 10
+ *   node scripts/deposit-reward.js vault-set-token --token USDT0
+ *   node scripts/deposit-reward.js vault-reward   --token USDT0 --amount 0.5
+ *   node scripts/deposit-reward.js vault-deposit  --token USDT0 --amount 10
  *   node scripts/deposit-reward.js store-vault-code --code 0729   # week defaults to now
  *   node scripts/deposit-reward.js vault-pay --user 0xWINNER --code 0729   # recover a stuck payout
- *   node scripts/deposit-reward.js season-rewards --token USDT --r1 20 --r2 5 --r3 3
+ *   node scripts/deposit-reward.js season-rewards --token USDT0 --r1 20 --r2 5 --r3 3
  *   node scripts/deposit-reward.js update-leaderboard --season 202607 --p1 0x.. --p2 0x.. --p3 0x.. --s1 120 --s2 90 --s3 70
- *   node scripts/deposit-reward.js season-deposit --season 202607 --token USDT --amount 28
- *   node scripts/deposit-reward.js pay --token USDT --to 0x.. --amount 1
+ *   node scripts/deposit-reward.js season-deposit --season 202607 --token USDT0 --amount 28
+ *   node scripts/deposit-reward.js pay --token USDT0 --to 0x.. --amount 1
+ *
+ * Gas is paid in OKB, the network's native token — there is no stablecoin
+ * gas token on X Layer.
  *
  * The DEPLOYER_PRIVATE_KEY must be the wallet that owns the contracts. The
  * script reads owner() on-chain first and refuses to send if your key isn't
@@ -89,23 +92,32 @@ try {
 }
 const { createPublicClient, createWalletClient, http, parseUnits, formatUnits } = _viem
 const { privateKeyToAccount } = _viemAccounts
-const { celo } = _viemChains
+const { xLayer, xLayerTestnet } = _viemChains
 
-// ── addresses (Celo mainnet — mirror lib/contract-abi.ts / lib/constants/tokens.ts) ──
-const VAULT_ADDRESS = (process.env.NEXT_PUBLIC_TREASURE_VAULT_ADDRESS || '0xB145dE296cD37Cb2A62Ced70Ee4d93c1d78df742')
+// ── addresses (X Layer — mirror lib/contract-abi.ts / lib/constants/tokens.ts) ──
+// --testnet defaults to the deployed X Layer testnet contracts (1952). On
+// mainnet the contracts do not exist yet: set NEXT_PUBLIC_TREASURE_VAULT_ADDRESS
+// / NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS in the env, or the tool refuses to run
+// (never guess a mainnet address).
+const TESTNET_VAULT_ADDRESS = '0x55567455a9be9e764cdf983a31e7d1e23c67d7ee'
+const TESTNET_REWARD_ADDRESS = '0x50b16bd7edb7b533aaee9457c16c8f3526012eaf'
 // NullStateRewardV3 (YYYYMM season ids). The old V2
 // (0x38F85c7cE8757E2940938D4e49bCDaE1CB5D475A) is retired — its owner-only
 // setters still WORK, so a stale default here would let season-rewards
 // "succeed" against the wrong contract with no error. Keep this in sync
 // with lib/contract-abi.ts.
-const REWARD_ADDRESS = (process.env.NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS || '0xec2e7fe57a92ada02c1ab37d9415dad508b7f111')
 
 const TOKENS = {
-  USDm: { symbol: 'USDm', address: '0x765DE816845861e75A25fCA122bb6898B8B1282a', decimals: 18, fee: '0x765DE816845861e75A25fCA122bb6898B8B1282a' },
-  USDT: { symbol: 'USDT', address: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e', decimals: 6,  fee: '0x0E2A3e05bc9A16F5292A6170456A710cb89C6f72' },
-  USDC: { symbol: 'USDC', address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C', decimals: 6,  fee: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B' },
+  // USDT0 is Tether's bridged USDT on X Layer; players see it as USDT.
+  USDT0: { symbol: 'USDT0', address: '0x779Ded0c9e1022225f8E0630b35a9b54bE713736', decimals: 6 },
+  USDC: { symbol: 'USDC', address: '0xB6CEceAB302E2E4948951eE7843FC24E92933061', decimals: 6 },
 }
-const CELO_NATIVE = '0x471EcE3750Da237f93B8E339c536989b8978a438' // the vault's celoToken marker
+// The contracts treat one marker address as "the native token" (their
+// native-token marker state variable): deposits/claims with it pay via msg.value
+// instead of transferFrom. The marker VALUE is inherited from the deployed
+// contracts — do not change it here; the contracts' owner setter is the
+// only way it ever moves. On X Layer the native token is OKB (18 decimals).
+const NATIVE_TOKEN_MARKER = '0x471EcE3750Da237f93B8E339c536989b8978a438'
 
 // ── minimal ABIs (only what this tool calls) ──
 const ERC20_ABI = [
@@ -173,9 +185,11 @@ const info = (msg) => console.log(`${C.cyn}${msg}${C.r}`)
 const warn = (msg) => console.log(`${C.yel}⚠ ${msg}${C.r}`)
 
 function resolveToken(sym) {
-  if (!sym || sym === true) die('missing --token (USDT | USDm | USDC)')
-  const key = Object.keys(TOKENS).find((k) => k.toLowerCase() === String(sym).toLowerCase())
-  if (!key) die(`unknown token "${sym}" — use USDT, USDm or USDC`)
+  if (!sym || sym === true) die('missing --token (USDC | USDT0)')
+  // 'USDT' is accepted as an alias for USDT0 — that is the name players see.
+  const want = String(sym).toLowerCase() === 'usdt' ? 'usdt0' : String(sym).toLowerCase()
+  const key = Object.keys(TOKENS).find((k) => k.toLowerCase() === want)
+  if (!key) die(`unknown token "${sym}" — use USDC or USDT0`)
   return TOKENS[key]
 }
 
@@ -189,7 +203,7 @@ function dollars(v, flag) {
 function tokenBySymbolFromAddress(addr) {
   const k = Object.keys(TOKENS).find((s) => TOKENS[s].address.toLowerCase() === String(addr).toLowerCase())
   if (k) return TOKENS[k]
-  if (String(addr).toLowerCase() === CELO_NATIVE.toLowerCase()) return { symbol: 'CELO', address: CELO_NATIVE, decimals: 18 }
+  if (String(addr).toLowerCase() === NATIVE_TOKEN_MARKER.toLowerCase()) return { symbol: 'OKB', address: NATIVE_TOKEN_MARKER, decimals: 18 }
   return { symbol: 'unknown', address: addr, decimals: 18 }
 }
 
@@ -314,25 +328,32 @@ async function main() {
     return
   }
 
-  const rpc = args.rpc || process.env.CELO_RPC_URL || 'https://forno.celo.org'
-  const publicClient = createPublicClient({ chain: celo, transport: http(rpc) })
+  const testnet = !!args.testnet
+  const chain = testnet ? xLayerTestnet : xLayer
+  const rpc = args.rpc || process.env.XLAYER_RPC_URL || (testnet ? 'https://testrpc.xlayer.tech' : 'https://rpc.xlayer.tech')
+  const explorer = testnet ? 'https://www.oklink.com/xlayer-test' : 'https://www.oklink.com/xlayer'
+  const VAULT_ADDRESS = testnet
+    ? (process.env.NEXT_PUBLIC_TREASURE_VAULT_ADDRESS || TESTNET_VAULT_ADDRESS)
+    : process.env.NEXT_PUBLIC_TREASURE_VAULT_ADDRESS
+  const REWARD_ADDRESS = testnet
+    ? (process.env.NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS || TESTNET_REWARD_ADDRESS)
+    : process.env.NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS
+  if (!VAULT_ADDRESS || !REWARD_ADDRESS) {
+    die('mainnet contracts are not deployed yet — set NEXT_PUBLIC_TREASURE_VAULT_ADDRESS and ' +
+        'NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS in the env, or run with --testnet')
+  }
+  const publicClient = createPublicClient({ chain, transport: http(rpc) })
 
   const pk = process.env.DEPLOYER_PRIVATE_KEY
   if (!pk) die('DEPLOYER_PRIVATE_KEY not set — put it in scripts/.env (copy scripts/.env.example)')
   const account = privateKeyToAccount(pk.startsWith('0x') ? pk : `0x${pk}`)
-  const walletClient = createWalletClient({ account, chain: celo, transport: http(rpc) })
-
-  // Optional gas fee currency (Celo can pay gas in a stablecoin)
-  let feeCurrency
-  if (args.fee && String(args.fee).toUpperCase() !== 'CELO') {
-    feeCurrency = resolveToken(args.fee).fee
-  }
+  const walletClient = createWalletClient({ account, chain, transport: http(rpc) })
 
   const send = async (label, req) => {
     if (dryRun) { info(`[dry-run] would send: ${label}`); return null }
-    const hash = await walletClient.writeContract(feeCurrency ? { ...req, feeCurrency } : req)
+    const hash = await walletClient.writeContract(req)
     info(`  tx: ${hash}`)
-    info(`  ${C.dim}https://celoscan.io/tx/${hash}${C.r}`)
+    info(`  ${C.dim}${explorer}/tx/${hash}${C.r}`)
     const rc = await publicClient.waitForTransactionReceipt({ hash })
     if (rc.status !== 'success') die(`${label} reverted on-chain`)
     ok(`${label} confirmed`)
@@ -393,8 +414,8 @@ async function main() {
       }
       console.log(`\n${C.b}Season bonus (Reward)${C.r}  ${C.dim}${REWARD_ADDRESS}${C.r}`)
       console.log(`  owner            ${rOwner}${rOwner.toLowerCase() === account.address.toLowerCase() ? `  ${C.grn}(you)${C.r}` : `  ${C.red}(NOT you)${C.r}`}`)
-      console.log(`  rank1/2/3 (6dec) ${formatUnits(r1, 6)} / ${formatUnits(r2, 6)} / ${formatUnits(r3, 6)}  ${C.dim}if token is USDT/USDC${C.r}`)
-      console.log(`  rank1/2/3 (18dec)${formatUnits(r1, 18)} / ${formatUnits(r2, 18)} / ${formatUnits(r3, 18)}  ${C.dim}if token is USDm${C.r}`)
+      console.log(`  rank1/2/3 (6dec) ${formatUnits(r1, 6)} / ${formatUnits(r2, 6)} / ${formatUnits(r3, 6)}  ${C.dim}if token is USDC/USDT0${C.r}`)
+      console.log(`  rank1/2/3 (18dec)${formatUnits(r1, 18)} / ${formatUnits(r2, 18)} / ${formatUnits(r3, 18)}  ${C.dim}if token is the native token (OKB)${C.r}`)
       console.log('')
       // Signer balances
       for (const s of Object.keys(TOKENS)) {

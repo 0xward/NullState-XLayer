@@ -79,7 +79,7 @@ const bad = (name, detail = '') => results.push({ pass: false, name, detail })
   // Not just the ones that obviously touch the chain. An earlier version of
   // this list held Shop/Craft/Pass/Bag only, on the reasoning that those are
   // the screens that talk to wagmi — and it passed while Rewards was crashing
-  // in MiniPay with "a client-side exception has occurred", because
+  // on a phone with "a client-side exception has occurred", because
   // hooks/useReward.ts called a wagmi hook that no grep of components/ ever
   // saw. The list is now every button on the rail: which screens touch the
   // chain is exactly the thing under test, so it cannot also be the thing that
@@ -125,10 +125,10 @@ const bad = (name, detail = '') => results.push({ pass: false, name, detail })
   // the engine's own order and asking for its exported surface tests exactly
   // what minification could have broken — a mangled cross-file name, or an
   // export that no longer exists — with nothing else in the way.
-  // A local build has no Firebase or Celo credentials, so backend calls fail
+  // A local build has no Firebase or X Layer credentials, so backend calls fail
   // here by design. What must stay clean is anything caused by the refactors:
   // wagmi provider errors, missing modules, 404s on renamed assets.
-  const ENV_NOISE = /favicon|firestore|firebase|forno\.celo\.org|google\.com|client is offline|ERR_CONNECTION_RESET|ERR_ABORTED|status of 50[0-9]|status of 40[34]|Could not reach Cloud Firestore/i
+  const ENV_NOISE = /favicon|firestore|firebase|rpc\.xlayer\.tech|testrpc\.xlayer\.tech|google\.com|client is offline|ERR_CONNECTION_RESET|ERR_ABORTED|status of 50[0-9]|status of 40[34]|Could not reach Cloud Firestore/i
 
   const bare = await browser.newPage()
   const engineErrors = []
@@ -176,7 +176,7 @@ const bad = (name, detail = '') => results.push({ pass: false, name, detail })
   }
   if (surface.globals.length) bad('cross-file engine globals survive minification', `missing: ${surface.globals.join(', ')}`)
   else ok('cross-file engine globals survive minification')
-  // Same environment filter as below: a local build has no Firebase or Celo
+  // Same environment filter as below: a local build has no Firebase or X Layer
   // credentials, so those calls fail here by design.
   const engineReal = engineErrors.filter(e => !ENV_NOISE.test(e))
   if (engineReal.length) bad('minified engine loads clean', engineReal.slice(0, 3).join(' | '))

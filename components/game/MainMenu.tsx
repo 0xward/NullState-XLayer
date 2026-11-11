@@ -34,7 +34,7 @@ interface MainMenuProps {
 // low-end phones don't pay for a CSS backdrop blur every frame).
 // Each option is a quiet mono text row; the "primary" row (Continue when
 // a save exists, otherwise New Game) gets the subtle boxed highlight the
-// reference uses on its focused item. Tap targets stay >=44px for MiniPay.
+// reference uses on its focused item. Tap targets stay >=44px (WCAG 2.5.5).
 function MenuItem({
   label,
   onClick,
@@ -133,7 +133,7 @@ export default function MainMenu({
           bunker protocol
         </div>
 
-        {/* v75 (user device test, MiniPay dev): the menu sat too high on
+        {/* v75 (user device test): the menu sat too high on
             tall screens because the column was top-anchored. flex-1
             spacers above and below the nav now center it vertically
             between the title block and the bottom wallet/legal block. */}
@@ -181,7 +181,8 @@ export default function MainMenu({
 
         {/* Wallet + legal links pinned to the bottom of the column.
             Support / Terms / Privacy MUST stay reachable from this first
-            screen — MiniPay submission checklist requirement. */}
+            screen — the legal links must stay reachable from the first
+            screen. */}
         <div className="mt-auto pt-10 w-full text-center ns-rise-3">
           {/* Real wallet -> masked address under a "wallet" label. Guest ->
               just "Guest Mode" (never the raw guest id). */}

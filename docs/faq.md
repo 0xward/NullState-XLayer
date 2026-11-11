@@ -43,10 +43,10 @@ A: Two ways: solve the weekly Treasure Vault code (find the Golden Key + Code Pa
 A: No. Drop rates are identical with or without a pass. The pass gives the exclusive Warden outfit, daily perks, and the right to claim a top-3 season bonus.
 
 **Q: Do I pay gas fees?**
-A: Celo fees are sub-cent, and the game defaults gas to whichever stablecoin you hold the most of (fee abstraction) — you don't need to hold CELO.
+A: X Layer fees are sub-cent, and the game defaults gas to whichever stablecoin you hold the most of (fee abstraction) — you don't need to hold OKB.
 
 **Q: Can I cash out stablecoin I earn?**
-A: Yes — vault and season payouts land directly in your wallet as USDT. It's yours; spend or transfer it like any MiniPay balance.
+A: Yes — vault and season payouts land directly in your wallet as USDT. It's yours; spend or transfer it like any wallet balance.
 
 ---
 
@@ -111,7 +111,7 @@ A: No. We don't sell data.
 A: Runs resume from your last save / bunker checkpoint, and your inventory and stats are preserved.
 
 **Q: I didn't get my payout. How do I check?**
-A: Vault and season payouts are on-chain — check your wallet history on Celoscan.
+A: Vault and season payouts are on-chain — check your wallet history on the X Layer explorer.
 
 **Q: Who do I contact for help?**
 A: Telegram — https://t.me/nullstate_id (also linked from the main menu).
@@ -121,13 +121,13 @@ A: Telegram — https://t.me/nullstate_id (also linked from the main menu).
 ## 💡 General
 
 **Q: Is this a real game or a scam?**
-A: The contracts are open-source (MIT) and verified on Celoscan — check them yourself.
+A: The contracts are open-source (MIT) and verified on the X Layer explorer — check them yourself.
 
 **Q: Does playing cost anything?**
-A: No. Movement, combat, looting, and NULL_STRIKE are all free and off-chain. Only optional purchases (Marketplace gear, Season Pass) and reward claims are real Celo transactions.
+A: No. Movement, combat, looting, and NULL_STRIKE are all free and off-chain. Only optional purchases (Marketplace gear, Season Pass) and reward claims are real X Layer transactions.
 
 **Q: Can I play on mobile?**
-A: Yes — it's built for MiniPay first. Any mobile browser with an injected wallet works too.
+A: Yes — it's built mobile-first. Any mobile browser with an injected wallet works.
 
 ---
 

@@ -14,7 +14,7 @@ import { parseTokenAmount } from '@/lib/constants/tokens'
 //   - wallet: buyer address
 //   - txHash: the ERC20 transfer() tx to the treasury
 //   - itemId: which marketplace item was bought
-//   - token : 'USDm' | 'USDC' | 'USDT'
+//   - token : 'USDC' | 'USDT'
 //
 // Verifies ON-CHAIN that the tx really transferred >= item price of the
 // chosen stablecoin to the treasury wallet, is confirmed, and hasn't been

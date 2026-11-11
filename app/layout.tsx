@@ -7,10 +7,10 @@ import WebVitals from '@/components/common/WebVitals'
 // ─── NOTE: Web3Providers moved to per-route nested layouts ───────────────────
 // app/game/layout.tsx and app/profile/layout.tsx wrap those routes with
 // Web3Providers so the wagmi/viem bundle is NOT loaded on public routes
-// (/, /terms, /privacy, /docs) — PageSpeed optimization (MiniPay requirement).
+// (/, /terms, /privacy, /docs) — PageSpeed optimization.
 
 // One source, lib/siteUrl.ts — this was one of five hand-written copies, and
-// the Celo review asking for a real domain is exactly the moment that costs
+// a review asking for a real domain is exactly the moment that costs
 // something. Needed here so relative OpenGraph/Twitter image paths resolve to
 // absolute URLs.
 import { SITE_URL } from '@/lib/siteUrl'
@@ -27,9 +27,9 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'NULL_STATE // Web3 RPG on Celo',
-  description: 'A real-time dungeon crawler on Celo. Descend the Forsaken Depths, unleash free NULL_STRIKEs, and survive. Permadeath is softened — die and respawn on the same floor. Earn real USDT rewards, playable right inside MiniPay.',
-  keywords: ['Celo', 'Web3', 'RPG', 'MiniPay', 'blockchain game'],
+  title: 'NULL_STATE // Web3 RPG on X Layer',
+  description: 'A real-time dungeon crawler on X Layer. Descend the Forsaken Depths, unleash free NULL_STRIKEs, and survive. Permadeath is softened — die and respawn on the same floor. Earn real USDT rewards, playable free in your browser.',
+  keywords: ['X Layer', 'Web3', 'RPG', 'blockchain game'],
   authors: [{ name: '0xward' }],
   manifest: '/manifest.webmanifest',
   // NOTE: icons are handled by Next's file conventions, not here — the
@@ -37,17 +37,17 @@ export const metadata: Metadata = {
   // favicon comes from app/icon.png and the apple-touch-icon from
   // app/apple-icon.png (both auto-emitted). Don't re-add an `icons` field.
   openGraph: {
-    title: 'NULL_STATE // Web3 RPG on Celo',
-    description: 'A real-time dungeon crawler on Celo. Play free, loot free — NULL_STRIKE is free too. Earn real USDT rewards on MiniPay.',
+    title: 'NULL_STATE // Web3 RPG on X Layer',
+    description: 'A real-time dungeon crawler on X Layer. Play free, loot free — NULL_STRIKE is free too. Earn real USDT rewards.',
     type: 'website',
     url: SITE_URL,
     siteName: 'NULL_STATE',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'NULL_STATE — crack the vault, earn real USDT on MiniPay' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'NULL_STATE — crack the vault, earn real USDT' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NULL_STATE // Web3 RPG on Celo',
-    description: 'A real-time dungeon crawler on Celo. Descend the depths. Face The Gatekeeper.',
+    title: 'NULL_STATE // Web3 RPG on X Layer',
+    description: 'A real-time dungeon crawler on X Layer. Descend the depths. Face The Gatekeeper.',
     images: ['/og-image.png'],
   },
   verification: {
@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="color-scheme" content="dark" />
         {/* NO PRECONNECTS HERE — this has been tried and measured, twice.
             See the long note in app/game/layout.tsx: preconnects to
-            firestore.googleapis.com and forno.celo.org were added once before
+            firestore.googleapis.com and the X Layer RPC were added once before
             for the same reason PageSpeed keeps suggesting them, and PageSpeed's
             own verdict afterwards was "Preconnect not used. Check that you are
             using the crossorigin attribute properly" — the anonymous sockets
@@ -116,12 +116,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               name: 'NULL_STATE',
               url: SITE_URL,
               description:
-                'A real-time pixel dungeon crawler on Celo. Descend the Forsaken Depths, survive permadeath, and earn real USDT rewards — playable free inside MiniPay.',
+                'A real-time pixel dungeon crawler on X Layer. Descend the Forsaken Depths, survive permadeath, and earn real USDT rewards — playable free in your browser.',
               image: `${SITE_URL}/og-image.png`,
               applicationCategory: 'GameApplication',
               genre: ['Role-playing game', 'Dungeon crawler'],
-              operatingSystem: 'Web, Android (MiniPay)',
-              gamePlatform: ['Web browser', 'MiniPay'],
+              operatingSystem: 'Web, Android',
+              gamePlatform: ['Web browser'],
               playMode: 'SinglePlayer',
               author: { '@type': 'Organization', name: '1892 Studio' },
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
@@ -134,9 +134,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             open, then fades to reveal the page. Client component; renders over
             {children}, which loads normally behind it. */}
         <SplashScreen />
-        {/* Real-user load speed → PostHog. MiniPay grades the p75 of actual
-            users, not a PageSpeed run, and we had no way to see that number.
-            Inert until NEXT_PUBLIC_POSTHOG_KEY is set. */}
+        {/* Real-user load speed → PostHog. The p75 of actual users, not a
+            PageSpeed run, is the number that matters — and we had no way to
+            see it. Inert until NEXT_PUBLIC_POSTHOG_KEY is set. */}
         <WebVitals />
         {/*
           Web3Providers adalah 'use client' component yang membungkus:

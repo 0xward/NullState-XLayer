@@ -3,7 +3,7 @@
  * scripts/generate-icon.js
  *
  * Generates app icons from public/NullState_Logo.png:
- *   - public/icon-512.png  → 512×512 px, optimised PNG  (MiniPay submission)
+ *   - public/icon-512.png  → 512×512 px, optimised PNG  (app icon)
  *   - app/icon.png         → 512×512 px, optimised PNG  (Next.js App Router)
  *   - public/favicon.ico   → 32×32 px ICO               (browser tab / bookmarks)
  *
@@ -35,7 +35,7 @@ async function main () {
       .png({ compressionLevel: 9, effort: 10 })
   }
 
-  // ── 3. public/icon-512.png  (MiniPay submission icon) ─────────────────────
+  // ── 3. public/icon-512.png  (512×512 app icon) ──────────────────────────
   const icon512 = path.join(root, 'public', 'icon-512.png')
   await squareIcon(512).toFile(icon512)
   const size512 = fs.statSync(icon512).size

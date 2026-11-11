@@ -10,7 +10,7 @@ import { getMarketplaceItem, TOKEN_SWAP_MAX_PRICE_USD } from '@/lib/constants/ma
 // Body: { wallet, itemId }
 //
 // Off-chain equivalent of /api/marketplace/verify — instead of verifying a
-// real USDm/USDC/USDT on-chain transfer, this deducts NullState Point from
+// real USDC/USDT on-chain transfer, this deducts NullState Point from
 // the player's balance (playerProfiles/{wallet}/nullstateTokenBalance) and
 // grants marketplace ownership the same way a real purchase would. Only
 // items with a `tokenPrice` set (Marketplace items $0.5–$2 — see
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     if (!item) return NextResponse.json({ error: 'Unknown item' }, { status: 400 })
     if (!item.tokenPrice) {
       return NextResponse.json(
-        { error: 'This item cannot be swapped for NullState Point — buy with USDm/USDC/USDT instead' },
+        { error: 'This item cannot be swapped for NullState Point — buy with USDC/USDT instead' },
         { status: 400 }
       )
     }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     // a rejected swap rather than a silent giveaway of the top of the ladder.
     if (item.price > TOKEN_SWAP_MAX_PRICE_USD) {
       return NextResponse.json(
-        { error: 'This item is above the NullState Point swap limit — buy with USDm/USDC/USDT instead' },
+        { error: 'This item is above the NullState Point swap limit — buy with USDC/USDT instead' },
         { status: 400 }
       )
     }
