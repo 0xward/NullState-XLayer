@@ -1,9 +1,11 @@
-# NULL_STATE // Web3 RPG on Celo
+# NULL_STATE // Web3 RPG on X Layer
 
-> A real-time, top-down dungeon crawler built on Celo. Play, loot, and unleash NULL_STRIKE for free — only optional Marketplace and Season Pass purchases settle as real on-chain transactions, and stablecoin rewards are paid out from the Treasure Vault, Leaderboard, and Season Pass. Permadeath is softened: die and you respawn on the same floor, full HP. Playable right inside MiniPay.
+> A real-time, top-down dungeon crawler built on X Layer. Play, loot, and unleash NULL_STRIKE for free — only optional Marketplace and Season Pass purchases settle as real on-chain transactions, and stablecoin rewards are paid out from the Treasure Vault, Leaderboard, and Season Pass. Permadeath is softened: die and you respawn on the same floor, full HP. Playable right in the browser with OKX Wallet or MetaMask.
+
+Built for the OKX X Layer TapeOut Accelerate hackathon.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Built on Celo](https://img.shields.io/badge/Built%20on-Celo-FCFF52)](https://celo.org)
+[![Built on X Layer](https://img.shields.io/badge/Built%20on-X%20Layer-black)](https://www.okx.com/xlayer)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
 
 ---
@@ -12,7 +14,7 @@
 
 NULL_STATE is a pixel-art dungeon crawler that runs directly in the browser — no installs, no app store. Take up the Knight's armor, descend into a procedurally generated bunker, fight your way through Orc and Skeleton crews, and ride the lift between floors as you push deeper into the depths.
 
-Playing, looting, and the **NULL_STRIKE** ultimate are all free — no wallet transaction required; NULL_STRIKE is gated by a short cooldown, not a fee. Weapons and armor can be bought on the in-game Marketplace with USDM/USDC/USDT, or swapped for using **NullState Point** — an off-chain, faucet-only currency earned by burning items (not real money, not withdrawable). Payments default to whichever stablecoin your wallet holds the most of.
+Playing, looting, and the **NULL_STRIKE** ultimate are all free — no wallet transaction required; NULL_STRIKE is gated by a short cooldown, not a fee. Weapons and armor can be bought on the in-game Marketplace with USDC/USDT, or swapped for using **NullState Point** — an off-chain, faucet-only currency earned by burning items (not real money, not withdrawable). Payments default to whichever stablecoin your wallet holds the most of.
 
 ---
 
@@ -24,7 +26,7 @@ Playing, looting, and the **NULL_STRIKE** ultimate are all free — no wallet tr
 - **The Lift** — replaces simple staircases. Approach it to open a floor-select menu: revisit any floor you've already cleared, or push forward to the next one (locked until every hostile on the current floor — including elites and the floor boss — is dead).
 - **The Golden Key** — a rare drop from interactive containers (Rotten Armoire, Lost Cache), capped at 1 per wallet per week and server-enforced. Combine it with a weekly Paper drop to attempt the Treasure Vault Quest in Bunker 5.
 - **Inventory panel** — three-tab wooden-theme UI (LOOT / FOOD / GEAR) with equip, eat, and sell actions.
-- **Marketplace** — buy weapons and armor with USDM, USDC, or USDT via on-chain ERC-20 transfer. Ownership is verified server-side and stored in Firebase.
+- **Marketplace** — buy weapons and armor with USDC or USDT via on-chain ERC-20 transfer. Ownership is verified server-side and stored in Firebase.
 - **Permadeath, softened** — dying drops you back at the floor you died on with full HP, rather than sending you back to floor 1. Progress on floors you've already cleared is preserved.
 - **NULL_STRIKE** — a free ultimate attack (short cooldown, no fee) you can trigger against elites, bosses, or when your HP runs critically low.
 - **Floor scaling** — monsters grow stronger every floor (+8% HP & damage per tier by default, configurable in `monster-config.js`). Boss floors (every 5th floor) have hardcoded overrides for dramatic difficulty spikes.
@@ -44,8 +46,8 @@ The game runs on stablecoins + an in-game point — **no speculative token**. Th
 
 - **Seasonal ranking is seasonal** — the Leaderboard ranks the XP you earn *within* the current month, not career XP, so every season starts level and a player who joins today can win it. Career XP has its own ALL-TIME board. See `docs/GAME-DESIGN.md` §9.2c.
 - **Progression** — 5 bunkers × 5 floors = 25 depths. Gear, weapon tiers, and Point carry across runs; deeper acts drop higher-tier crafting shards.
-- **Guest mode** — outside MiniPay you can play with no wallet; progress is kept in `localStorage` and migrated onto your wallet the first time you connect one. USDT reward claims require a wallet.
-- **Flexible stablecoin** — payments and gas default to whichever of USDM/USDC/USDT the wallet holds the most of (fee-abstraction), with a manual override.
+- **Guest mode** — you can play with no wallet; progress is kept in `localStorage` and migrated onto your wallet the first time you connect one. USDT reward claims require a wallet.
+- **Flexible stablecoin** — payments default to whichever of USDC/USDT the wallet holds the most of, with a manual override. Gas is paid in OKB.
 - **Reward pool** — stablecoin reward pools are funded by 1892 Studio, seeded manually at launch, with the intent to route a share (~20%) of Marketplace/gear revenue back to players over time.
 
 ---
@@ -57,8 +59,8 @@ The game runs on stablecoins + an in-game point — **no speculative token**. Th
 | Framework | [Next.js 14](https://nextjs.org) (App Router) + React 18 + TypeScript |
 | Game engine | Vanilla JS / Canvas2D, mounted into a React component (no game-framework dependency) |
 | Styling | Tailwind CSS + custom wooden-theme CSS |
-| Web3 | [wagmi](https://wagmi.sh) + [viem](https://viem.sh) (injected connector only — RainbowKit removed), targeting Celo Mainnet |
-| Tokens | Mento USDM / USDC / USDT (ERC-20, 6- and 18-decimal aware) |
+| Web3 | [wagmi](https://wagmi.sh) + [viem](https://viem.sh) (injected connector only — OKX Wallet and MetaMask), targeting X Layer |
+| Tokens | USDC / USDT0 (ERC-20, 6-decimal) |
 | Database | Firebase — Realtime DB (player profiles, marketplace ownership, materials) + Firestore (usernames, bunker saves, leaderboard) |
 | Contracts | Solidity, deployed with Foundry |
 
@@ -68,9 +70,9 @@ The game runs on stablecoins + an in-game point — **no speculative token**. Th
 
 | | |
 |---|---|
-| **Network** | Celo Mainnet (Chain ID `42220`) |
-| **Tokens** | USDM (Mento), USDC, USDT — ERC-20 transfers via `buyMarketplaceItem()` |
-| **Wallet support** | Injected wallets only — MiniPay (auto-connects on launch) and MetaMask browser extension. WalletConnect/Coinbase Wallet/Rainbow are not integrated (WalletConnect relay was removed; see `docs/network-manifest.md`). |
+| **Network** | X Layer (Chain ID `196`) |
+| **Tokens** | USDC, USDT0 — ERC-20 transfers via `buyMarketplaceItem()` |
+| **Wallet support** | Injected wallets only — OKX Wallet and MetaMask browser extension. WalletConnect/Coinbase Wallet/Rainbow are not integrated (WalletConnect relay was removed; see `docs/network-manifest.md`). |
 | **Verification** | `POST /api/marketplace/verify` validates on-chain transfer, prevents replay, records ownership |
 
 ---
@@ -78,8 +80,8 @@ The game runs on stablecoins + an in-game point — **no speculative token**. Th
 ## Getting Started
 
 ```bash
-git clone https://github.com/0xward/NullState.git
-cd NullState
+git clone https://github.com/0xward/NullState-XLayer.git
+cd NullState-XLayer
 npm ci          # install exact deps from package-lock.json
 npm run dev     # development server — http://localhost:3000
 ```
@@ -159,4 +161,4 @@ Released under the [MIT License](./LICENSE).
 
 ---
 
-**Built on Celo · MiniPay Ready · ERC-20 Marketplace**
+**Built on X Layer · ERC-20 Marketplace**
