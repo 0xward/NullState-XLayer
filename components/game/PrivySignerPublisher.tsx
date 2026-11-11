@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth'
 import { createWalletClient, custom, encodeFunctionData } from 'viem'
-import { xLayerChain } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain } from '@/lib/xlayerRpc'
 import { usePrivySignerPublish, PRIVY_SIGNER_DEFAULT } from '@/lib/privySignerBridge'
 import { ERC20_ABI } from '@/lib/contract-abi'
 import {
@@ -53,15 +53,15 @@ export default function PrivySignerPublisher() {
     ;(async () => {
       try {
         // Order matters — see the note above. Switch, THEN take the provider.
-        if (wallet.chainId !== `eip155:${xLayerChain.id}`) {
-          await wallet.switchChain(xLayerChain.id)
+        if (wallet.chainId !== `eip155:${xLayerTestnetChain.id}`) {
+          await wallet.switchChain(xLayerTestnetChain.id)
         }
         const provider = await wallet.getEthereumProvider()
         if (cancelled) return
         const address = wallet.address as `0x${string}`
         const walletClient = createWalletClient({
           account: address,
-          chain: xLayerChain,
+          chain: xLayerTestnetChain,
           transport: custom(provider),
         })
         // The same transfer WagmiIsland's payToTreasury builds, from the same
@@ -81,7 +81,7 @@ export default function PrivySignerPublisher() {
           })
           return walletClient.sendTransaction({
             account: address,
-            chain: xLayerChain,
+            chain: xLayerTestnetChain,
             to: cfg.address as `0x${string}`,
             data,
             value: BigInt(0),

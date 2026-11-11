@@ -1,6 +1,6 @@
 import { createPublicClient, createWalletClient, formatUnits, type PublicClient, type WalletClient } from 'viem'
 import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts'
-import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain, xlayerTestnetTransport } from '@/lib/xlayerRpc'
 import { TREASURE_VAULT_ABI, TREASURE_VAULT_ADDRESS } from '@/lib/contract-abi'
 import { MARKETPLACE_TOKENS } from '@/lib/constants/tokens'
 
@@ -119,10 +119,10 @@ export function getVaultClients(): VaultClients | null {
   if (!key || !TREASURE_VAULT_ADDRESS || TREASURE_VAULT_ADDRESS === '0x') return null
   try {
     const account = privateKeyToAccount(key)
-    const transport = xlayerTransport()
+    const transport = xlayerTestnetTransport()
     return {
-      publicClient: createPublicClient({ chain: xLayerChain, transport }) as PublicClient,
-      walletClient: createWalletClient({ chain: xLayerChain, transport, account }),
+      publicClient: createPublicClient({ chain: xLayerTestnetChain, transport }) as PublicClient,
+      walletClient: createWalletClient({ chain: xLayerTestnetChain, transport, account }),
       account,
     }
   } catch {
@@ -183,7 +183,7 @@ export async function ensureWeeklyCodeOnChain(
       functionName: 'storeWeeklyVaultCode',
       args: [BigInt(weekId), code],
       account,
-      chain: xLayerChain,
+      chain: xLayerTestnetChain,
     })
     await publicClient.waitForTransactionReceipt({ hash })
     return { onChain: true, stored: true, txHash: hash }
@@ -270,7 +270,7 @@ export async function payVaultWinner(params: {
         functionName: 'submitVaultCode',
         args: [user, weekBig, expectedCode],
         account,
-        chain: xLayerChain,
+        chain: xLayerTestnetChain,
       })
       const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
       if (receipt.status !== 'success') {
@@ -333,7 +333,7 @@ export async function storeThenPay(params: {
       functionName: 'storeWeeklyVaultCode',
       args: [BigInt(weekId), expectedCode],
       account,
-      chain: xLayerChain,
+      chain: xLayerTestnetChain,
       nonce: baseNonce,
     })
 
@@ -343,7 +343,7 @@ export async function storeThenPay(params: {
       functionName: 'submitVaultCode',
       args: [walletAddress as `0x${string}`, BigInt(weekId), expectedCode],
       account,
-      chain: xLayerChain,
+      chain: xLayerTestnetChain,
       nonce: baseNonce + 1,
     })
 

@@ -24,15 +24,15 @@ export default function MarketplaceScreen({ onBack, address }: MarketplaceScreen
   // screen is not inside WagmiProvider and calling its hooks here would throw.
   // Null until wagmi has loaded; the effect below already handles that.
   const publicClient = wallet.publicClient
-  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDC')
+  const [token, setToken] = useState<MarketplaceTokenSymbol>('TUSD')
   // The same balances pickBestPaymentToken reads, kept rather than
   // discarded — so the selector can show what the player holds instead of
   // making them discover it by failing a purchase.
   const [stableBalances, setStableBalances] = useState<Record<MarketplaceTokenSymbol, number | null>>(
-    { USDC: null, USDT: null },
+    { USDC: null, USDT: null, TUSD: null },
   )
-  // Flexible stablecoin (Phase 2): default the "Pay with" token to whichever of
-  // USDC/USDT the wallet holds the most of, so a player isn't forced to
+  // Flexible stablecoin (Phase 2): default the "Pay with" token to whichever accepted
+  // token the wallet holds the most of, so a player isn't forced to
   // top up a specific coin. The manual selector below still lets them switch;
   // once they do, we stop auto-overriding their choice.
   const manualTokenRef = useRef(false)

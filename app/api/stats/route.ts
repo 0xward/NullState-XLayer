@@ -86,7 +86,7 @@ export async function GET() {
     // before `usd` existed fall back to today's price, which is the best that
     // can be done for them — `volumeEstimated` says how many are guesses so the
     // number is never quoted as exact when it isn't.
-    const purchasesByToken: TokenCount = { USDC: 0, USDT: 0 }
+    const purchasesByToken: TokenCount = { USDC: 0, USDT: 0, TUSD: 0 }
     let purchaseCount = 0
     let purchaseVolumeUsd = 0
     let volumeEstimated = 0

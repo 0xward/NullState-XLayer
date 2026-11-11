@@ -1,22 +1,23 @@
 /**
  * NullState Web3 Client
  *
- * Viem public client configured for X Layer Mainnet.
- * Use this for read-only contract calls outside of React hooks
+ * Viem public client configured for X Layer Testnet (chain 1952) — the
+ * demo runs on testnet; the contracts have not been deployed on mainnet
+ * yet. Use this for read-only contract calls outside of React hooks
  * (e.g. API routes, server-side data fetching).
  *
  * For React components, prefer wagmi's usePublicClient() hook.
  */
 
 import { createPublicClient } from 'viem'
-import { xlayerTransport, xLayerChain } from '@/lib/xlayerRpc'
+import { xlayerTestnetTransport, xLayerTestnetChain } from '@/lib/xlayerRpc'
 
 export const publicClient = createPublicClient({
-  chain: xLayerChain,
+  chain: xLayerTestnetChain,
   // Endpoint choice lives in lib/xlayerRpc.ts so the browser and the server can
   // never disagree about it — they used to, and only this half honoured the
   // env var.
-  transport: xlayerTransport(),
+  transport: xlayerTestnetTransport(),
 })
 
 /** ISO week helper — returns YYYYWW (e.g. 202627) */

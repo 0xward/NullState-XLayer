@@ -1,6 +1,6 @@
 import { createPublicClient, createWalletClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain, xlayerTestnetTransport } from '@/lib/xlayerRpc'
 import { PASS_SBT_ABI, PASS_SBT_ADDRESS } from '@/lib/contract-abi'
 import { getCurrentSeasonId } from '@/lib/web3-client'
 import type { getAdminDb } from '@/firebase-config'
@@ -94,8 +94,8 @@ export async function maybeGiftReferralPass(db: Db, buyerWallet: string): Promis
     const backendPrivateKey = process.env.BACKEND_PRIVATE_KEY as `0x${string}` | undefined
     if (!backendPrivateKey || !PASS_SBT_ADDRESS) { await giftRef.remove(); return }
 
-    const transport = xlayerTransport()
-    const publicClient = createPublicClient({ chain: xLayerChain, transport })
+    const transport = xlayerTestnetTransport()
+    const publicClient = createPublicClient({ chain: xLayerTestnetChain, transport })
     const holds = await publicClient.readContract({
       address: PASS_SBT_ADDRESS,
       abi: PASS_SBT_ABI,
@@ -105,7 +105,7 @@ export async function maybeGiftReferralPass(db: Db, buyerWallet: string): Promis
     if (holds) { await giftRef.update({ status: 'skipped_already_holds' }); return }
 
     const account = privateKeyToAccount(backendPrivateKey)
-    const walletClient = createWalletClient({ chain: xLayerChain, transport, account })
+    const walletClient = createWalletClient({ chain: xLayerTestnetChain, transport, account })
     const mintHash = await walletClient.writeContract({
       address: PASS_SBT_ADDRESS,
       abi: PASS_SBT_ABI,

@@ -18,7 +18,7 @@ import {
   WagmiProvider, createConfig, http,
   useAccount, usePublicClient, useWalletClient, useBalance, useSwitchChain, useConnect, useDisconnect,
 } from 'wagmi'
-import { xLayerChain, xLayerTestnetChain, xlayerTransport, XLAYER_CHAIN_ID, DEFAULT_XLAYER_TESTNET_RPC } from '@/lib/xlayerRpc'
+import { xLayerChain, xLayerTestnetChain, xlayerTransport, XLAYER_TESTNET_CHAIN_ID, DEFAULT_XLAYER_TESTNET_RPC } from '@/lib/xlayerRpc'
 import { injected } from 'wagmi/connectors'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -83,9 +83,9 @@ export function WagmiWalletIsland() {
   const { address, isConnected, chain } = useAccount()
   const { disconnect } = useDisconnect()
   const { switchChain, switchChainAsync } = useSwitchChain()
-  const publicClient  = usePublicClient({ chainId: XLAYER_CHAIN_ID })
-  const { data: walletClient } = useWalletClient({ chainId: XLAYER_CHAIN_ID })
-  const { data: balanceData }  = useBalance({ address, chainId: XLAYER_CHAIN_ID })
+  const publicClient  = usePublicClient({ chainId: XLAYER_TESTNET_CHAIN_ID })
+  const { data: walletClient } = useWalletClient({ chainId: XLAYER_TESTNET_CHAIN_ID })
+  const { data: balanceData }  = useBalance({ address, chainId: XLAYER_TESTNET_CHAIN_ID })
 
   const [error, setError] = useState<string | null>(null)
   const [insufficientFunds, setInsufficientFunds] = useState(false)
@@ -97,7 +97,7 @@ export function WagmiWalletIsland() {
   useEffect(() => {
     if (isConnected) return
     const injectedConnector = connectors.find(c => c.id === 'injected') ?? connectors[0]
-    if (injectedConnector) connect({ connector: injectedConnector, chainId: XLAYER_CHAIN_ID })
+    if (injectedConnector) connect({ connector: injectedConnector, chainId: XLAYER_TESTNET_CHAIN_ID })
   }, [isConnected, connect, connectors])
 
   // ── AND ONTO X LAYER, IMMEDIATELY ────────────────────────────────────────
@@ -112,7 +112,7 @@ export function WagmiWalletIsland() {
   //     if (assertChainId && connectorChainId !== chainId)
   //       throw new ConnectorChainMismatchError(...)
   //
-  // useWalletClient({chainId: XLAYER}) therefore resolves to undefined on any
+  // useWalletClient({chainId: XLAYER_TESTNET}) therefore resolves to undefined on any
   // other chain, every payment hits its `!walletClient` guard, and the player
   // is told their wallet is not connected. `switchToXLayer` already existed for
   // exactly this — plumbed through the bridge and never called from anywhere.
@@ -126,12 +126,12 @@ export function WagmiWalletIsland() {
   // the bug. They get the banner and its button instead, and moving the wallet
   // to another chain arms one fresh attempt.
   const askedFor = useRef<number | null>(null)
-  const onWrongChain = isConnected && !!chain && chain.id !== XLAYER_CHAIN_ID
+  const onWrongChain = isConnected && !!chain && chain.id !== XLAYER_TESTNET_CHAIN_ID
   useEffect(() => {
     if (!onWrongChain || !chain) return
     if (askedFor.current === chain.id) return
     askedFor.current = chain.id
-    try { switchChain({ chainId: XLAYER_CHAIN_ID }) } catch { /* declined or unsupported */ }
+    try { switchChain({ chainId: XLAYER_TESTNET_CHAIN_ID }) } catch { /* declined or unsupported */ }
   }, [onWrongChain, chain, switchChain])
 
   const nativeBalance = balanceData
@@ -145,7 +145,7 @@ export function WagmiWalletIsland() {
   // so all three payment paths tell the same truth.
   const assertReady = useCallback(() => {
     if (onWrongChain) {
-      throw new Error('Wrong network — NullState runs on X Layer. Switch your wallet to X Layer and try again.')
+      throw new Error('Wrong network — NullState runs on X Layer Testnet. Switch your wallet to X Layer Testnet and try again.')
     }
     if (!walletClient || !address) throw new Error('Wallet not connected')
   }, [onWrongChain, walletClient, address])
@@ -161,7 +161,7 @@ export function WagmiWalletIsland() {
         // abstraction on X Layer, so the wallet must hold a little OKB.
         const hash = await walletClient.sendTransaction({
           account: address,
-          chain:   xLayerChain,
+          chain:   xLayerTestnetChain,
           to:      NULLSTATE_ADDRESS,
           data,
           value:   value ?? BigInt(0),
@@ -193,6 +193,8 @@ export function WagmiWalletIsland() {
 
   // Plain ERC20 USDC transfer() — used for the NULL_STRIKE fee. Sends
   // directly to `toAddress` (the reward contract), NOT through NullState.sol.
+  // NOTE: USDC_ADDRESS is the mainnet token and this path currently has no
+  // live caller on the testnet demo — left as-is, not wired to testnet tUSD.
   const payStableFee = useCallback(
     async (amountWei: bigint, toAddress: `0x${string}`): Promise<string> => {
       assertReady()
@@ -210,7 +212,7 @@ export function WagmiWalletIsland() {
       try {
         const hash = await walletClient.sendTransaction({
           account: address,
-          chain:   xLayerChain,
+          chain:   xLayerTestnetChain,
           to:      USDC_ADDRESS,
           data,
           value:   BigInt(0),
@@ -253,7 +255,7 @@ export function WagmiWalletIsland() {
       try {
         const hash = await walletClient.sendTransaction({
           account: address,
-          chain:   xLayerChain,
+          chain:   xLayerTestnetChain,
           to:      cfg.address as `0x${string}`,
           data,
           value:   BigInt(0),
@@ -278,7 +280,7 @@ export function WagmiWalletIsland() {
 
   const connectWallet = useCallback(async () => {
     const target = connectors.find(c => c.id === 'injected') ?? connectors[0]
-    if (target) connect({ connector: target, chainId: XLAYER_CHAIN_ID })
+    if (target) connect({ connector: target, chainId: XLAYER_TESTNET_CHAIN_ID })
   }, [connect, connectors])
 
   // The async variant, because the button in WrongNetworkBar shows a pending
@@ -287,12 +289,12 @@ export function WagmiWalletIsland() {
   // app error: the bar simply stays up, which is already the honest report.
   const switchToXLayer = useCallback(async () => {
     try {
-      await switchChainAsync({ chainId: XLAYER_CHAIN_ID })
+      await switchChainAsync({ chainId: XLAYER_TESTNET_CHAIN_ID })
       setError(null)
     } catch {
       // Wallets that cannot switch (some in-app browsers pin their chain) end
       // up here. Saying so beats a button that silently does nothing.
-      setError('Could not switch automatically — please choose X Layer in your wallet app.')
+      setError('Could not switch automatically — please choose X Layer Testnet in your wallet app.')
     }
   }, [switchChainAsync])
 

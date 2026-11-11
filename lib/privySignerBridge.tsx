@@ -5,8 +5,9 @@ import type { Account, Transport, WalletClient } from 'viem'
 
 // The X Layer chain TYPE, not the value — same erased-`typeof import(...)`
 // pattern as lib/walletBridge.tsx, so viem stays out of this module's
-// runtime graph.
-type XLayerChain = typeof import('./xlayerRpc').xLayerChain
+// runtime graph. The app runs on X Layer Testnet (chain 1952), so the type
+// is the testnet chain.
+type XLayerChain = typeof import('./xlayerRpc').xLayerTestnetChain
 
 // ─── The Privy signer, published rather than wrapped ─────────────────────────
 //

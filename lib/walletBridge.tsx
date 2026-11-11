@@ -6,8 +6,9 @@ import type { Account, PublicClient, Transport, WalletClient } from 'viem'
 // The X Layer chain TYPE, not the value. `typeof import(...)` is erased at
 // compile time, so viem never enters this module's runtime graph and the
 // wagmi split stays intact — but the client below keeps X Layer's formatters,
-// which is what makes sendTransaction type-check on this chain.
-type XLayerChain = typeof import('./xlayerRpc').xLayerChain
+// which is what makes sendTransaction type-check on this chain. The app runs
+// on X Layer Testnet (chain 1952), so the type is the testnet chain.
+type XLayerChain = typeof import('./xlayerRpc').xLayerTestnetChain
 import type { MarketplaceTokenSymbol } from './constants/tokens'
 
 // ─── Why a bridge sits between the app and wagmi ─────────────────────────────

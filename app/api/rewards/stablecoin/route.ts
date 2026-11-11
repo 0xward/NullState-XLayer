@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createPublicClient, http, formatUnits } from 'viem'
-import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain, xlayerTestnetTransport } from '@/lib/xlayerRpc'
 import { getAdminDb } from '@/firebase-config'
 import { walletAddressSchema } from '@/lib/validation'
 import { normalizeWalletAddress } from '@/lib/vault-utils'
@@ -34,8 +34,8 @@ for (const t of Object.values(MARKETPLACE_TOKENS)) {
 async function currentVaultRewardInfo(): Promise<{ amount: number; token: string } | null> {
   try {
     if (!TREASURE_VAULT_ADDRESS || TREASURE_VAULT_ADDRESS === '0x') return null
-    const transport = xlayerTransport()
-    const publicClient = createPublicClient({ chain: xLayerChain, transport })
+    const transport = xlayerTestnetTransport()
+    const publicClient = createPublicClient({ chain: xLayerTestnetChain, transport })
     const [reward, tokenAddr] = await Promise.all([
       publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: VAULT_READ_ABI, functionName: 'vaultReward' }) as Promise<bigint>,
       publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: VAULT_READ_ABI, functionName: 'currentRewardToken' }) as Promise<`0x${string}`>,

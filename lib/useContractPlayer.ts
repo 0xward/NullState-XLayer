@@ -19,6 +19,7 @@ import {
 } from '@/lib/usernameService'
 import { updateLeaderboardEntry, getLeaderboard, getLeaderboardEntry } from '@/lib/leaderboardService'
 import { readCachedProfile, writeCachedProfile } from '@/lib/profileCache'
+import { isAuthConfigured } from '@/lib/firebaseAuth'
 
 /**
  * The fast path: one same-origin GET. Returns null (not a throw) on any
@@ -69,6 +70,29 @@ async function fetchViaSdk(walletAddress: string): Promise<PlayerProfile> {
   }
 }
 
+/**
+ * A promise that rejects after `ms` — a safety net for paths that can hang
+ * without ever settling. The Firestore client SDK with an unconfigured app
+ * opens a WebChannel stream that never resolves or rejects, so without this
+ * a hang upstream strands `isLoading` true forever and the UI's loading
+ * indicator never clears.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Timed out waiting for ${label} (${ms}ms)`)), ms)
+    }),
+  ]).finally(() => clearTimeout(timer))
+}
+
+// How long the Firestore-SDK fallback may take before the fetch gives up and
+// settles on the cached profile instead. The API route above answers in well
+// under a second when Firebase is configured, so 15s only ever bites when
+// something is genuinely stuck.
+const PROFILE_SDK_TIMEOUT_MS = 15_000
+
 export function useContractPlayer(walletAddress: string | undefined) {
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -101,7 +125,29 @@ export function useContractPlayer(walletAddress: string | undefined) {
       // The SDK path below is kept as a fallback for the case where the server
       // has no Firebase credentials: then this is merely slow again, rather
       // than broken.
-      const profile = await fetchIdentity(walletAddress) ?? await fetchViaSdk(walletAddress)
+      //
+      // BUT: when the client has no Firebase config at all (no API key — the
+      // demo deployment has no Firebase env vars), the SDK path never
+      // settles: initializeApp() accepts the empty config, but the WebChannel
+      // stream behind getDoc() never resolves or rejects, so awaiting it
+      // would hang forever and `isLoading` would never clear — the
+      // "loading player profile…" indicator seen stuck on screen for
+      // minutes. So skip the SDK entirely when auth is not configured, and
+      // race it against a timeout as a safety net either way.
+      const profile =
+        (await fetchIdentity(walletAddress)) ??
+        (isAuthConfigured()
+          ? await withTimeout(fetchViaSdk(walletAddress), PROFILE_SDK_TIMEOUT_MS, 'player profile (Firestore SDK)').catch(() => null)
+          : null)
+
+      if (!profile) {
+        // No live profile and no SDK fallback (or it timed out) — keep the
+        // cached/seed profile rather than blanking it, and still settle so
+        // the loading indicator clears. The `finally` below runs on this
+        // return too.
+        setPlayerProfile((prev) => prev ?? readCachedProfile(walletAddress))
+        return
+      }
 
       setPlayerProfile(profile)
       writeCachedProfile(profile)

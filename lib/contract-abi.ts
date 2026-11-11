@@ -1,21 +1,23 @@
 /**
  * NullState Smart Contract ABIs & Addresses
  *
- * Contracts deployed on X Layer Mainnet (chainId: 196)
+ * Contracts deployed on X Layer Testnet (chainId: 1952) — the live demo
+ * runs against testnet; the contracts have NOT been deployed on mainnet
+ * yet (chainId: 196).
  * - PassSBT       : NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS
  * - NullStateReward: NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS
  * - TreasureVault : NEXT_PUBLIC_TREASURE_VAULT_ADDRESS
  *
- * The hardcoded fallbacks below are the last-known deployment addresses.
- * Set the env vars above to the live X Layer deployment addresses — if the
- * contracts have not been deployed on X Layer mainnet yet, these fallbacks
- * MUST be overridden before any on-chain write is attempted.
+ * The hardcoded fallbacks below are the testnet deployment addresses
+ * (verified on-chain 2026-11-11). Set the env vars above to override
+ * them with a different deployment — if the contracts are redeployed,
+ * these fallbacks MUST be updated before any on-chain write is attempted.
  */
 
 // ─── Contract Addresses ───────────────────────────────────────────────────────
-// Live & verified on X Layer Mainnet. Env vars still override if set, but these
-// hardcoded values act as the source of truth so the app never silently falls
-// back to '0x'.
+// Live & verified on X Layer Testnet (chain 1952, redeployed 2026-11-11).
+// Env vars still override if set, but these hardcoded values act as the
+// source of truth so the app never silently falls back to '0x'.
 
 // PassSBT v1 was live at 0x5235ffBb4C02fCabf29b76Aa0011DA3E1eD96f0e but had
 // TWO confirmed bugs (see contracts/PASSBT_V2_UPGRADE_GUIDE.md):
@@ -27,36 +29,30 @@
 // PassSBTv2.sol (v2.1 — flexible USDC/USDT payment via backend-verified
 // mint, see contracts/PassSBTv2.sol for the full design writeup).
 //
-// PassSBTv2 (v2.1) redeployed to X Layer Mainnet 2026-07-13 at the address
-// below, AFTER an earlier same-day deploy at
-// 0x390239A07616624b6521EC0022D348512d09053b was abandoned — that one was
-// compiled with a non-release solc build (npm resolved "^0.8.36" to an
-// unofficial/nightly-like build, `0.8.36+commit.8a079791`, which had no
-// matching entry in the explorer's verified-compiler list, so it could never
-// be verified). This address was compiled with solc 0.8.20+commit.a1b79de6
-// (the same official release used throughout this project) — explorer
-// verification SUCCEEDED. The old 0x39023... address was never
-// initialized/used (no seasons, no mints) and is abandoned for good.
+// PassSBTv2 (v2.1) was redeployed to X Layer Mainnet 2026-07-13 at
+// 0x44065B9faf1149FEB4D6Dcdb10d864B2054c7f39, AFTER an earlier same-day
+// deploy at 0x390239A07616624b6521EC0022D348512d09053b was abandoned —
+// that one was compiled with a non-release solc build (npm resolved
+// "^0.8.36" to an unofficial/nightly-like build, `0.8.36+commit.8a079791`,
+// which had no matching entry in the explorer's verified-compiler list, so
+// it could never be verified). That address was compiled with solc
+// 0.8.20+commit.a1b79de6 (the same official release used throughout this
+// project) — explorer verification SUCCEEDED. The old 0x39023... address
+// was never initialized/used (no seasons, no mints) and is abandoned for
+// good.
 //
-// DONE on-chain this session (Fa confirmed all 7 txs mined):
-// 1. `setBackendAddress(0xAb73e0E942ecAAF634216EFb78786fa0F92f2eb6, true)`
-//    — same backend wallet already authorized on TreasureVault.sol
-//    (confirmed via that contract's BackendAddressUpdated event log).
-// 2. `initializeSeason` x6, values from SEASONS_CONFIGURATION.md (2026
-//    timestamps, corrected — not the 2024 values wrongly used on the
-//    retired v1 contract).
-//
-// STILL PENDING — the only steps left before this is usable end-to-end:
-// 1. Set NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS in Vercel to this address
-//    (Fa needs to do this — I can't touch Vercel from here), redeploy.
-// 2. Test a paid mint end-to-end on mobile — ideally from a wallet holding
-//    USDC or USDT (not the older single-token path), to actually confirm pickBestPaymentToken()
-//    auto-detect picks the right token and /api/passsbt/mint's on-chain
-//    verification + backendMintPass() call both succeed for a non-USDC
-//    payment, not just the token everyone's been testing with so far.
+// UPDATE 2026-11-11: the mainnet v2.1 contract above was retired in favor
+// of PassSBTv3, and the app now defaults to the X Layer TESTNET redeploy
+// of PassSBTv3 (address in the fallback below, verified on-chain). The
+// mainnet deployment has not happened yet, so the demo runs on testnet —
+// no env var is needed; the fallback IS the testnet address. What remains
+// to test, on testnet: a paid mint end-to-end with a wallet holding tUSD
+// (the testnet reward token), to confirm pickBestPaymentToken()
+// auto-detect picks it and /api/passsbt/mint's on-chain verification +
+// backendMintPass() call both succeed for a non-USDC payment.
 export const PASS_SBT_ADDRESS = (process.env
   .NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS ||
-  '0x44065B9faf1149FEB4D6Dcdb10d864B2054c7f39') as `0x${string}`
+  '0x52Fa686f14849B69309b8772EcE8051D508f7B98') as `0x${string}`
 
 // #9 GUARD (added this session, investigating "Mint Pass Transaction failed
 // despite sufficient balance"): the STILL PENDING note above says Vercel's
@@ -85,12 +81,14 @@ if (PASS_SBT_ADDRESS && RETIRED_PASS_SBT_ADDRESSES.includes(PASS_SBT_ADDRESS.toL
   const msg =
     `[NullState] PASS_SBT_ADDRESS (${PASS_SBT_ADDRESS}) is a RETIRED PassSBT contract. ` +
     `Every mint attempt will fail. Fix: update NEXT_PUBLIC_PASS_SBT_CONTRACT_ADDRESS in ` +
-    `Vercel's env vars to 0x44065B9faf1149FEB4D6Dcdb10d864B2054c7f39 (or remove the var ` +
+    `Vercel's env vars to 0x52Fa686f14849B69309b8772EcE8051D508f7B98 (or remove the var ` +
     `entirely so the hardcoded fallback above is used), then redeploy.`
   console.error(msg)
 }
 
-// NullStateRewardV3 (deployed 2026-07, X Layer mainnet). Replaces V2
+// NullStateRewardV3 (deployed 2026-07, X Layer mainnet; redeployed on
+// X Layer testnet 2026-11-11 — the app now defaults to the testnet
+// deployment). Replaces V2
 // (0x38F85c7cE8757E2940938D4e49bCDaE1CB5D475A) — see RETIRED list below.
 // V2 capped seasonId at 1..6 while PassSBTv3 + the app use YYYYMM, which
 // made the season-bonus reward impossible to deposit/claim; V3 relaxes that
@@ -98,7 +96,7 @@ if (PASS_SBT_ADDRESS && RETIRED_PASS_SBT_ADDRESSES.includes(PASS_SBT_ADDRESS.toL
 // unaffected (that pool is already off-chain).
 export const REWARD_CONTRACT_ADDRESS = (process.env
   .NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS ||
-  '0xec2e7fe57a92ada02c1ab37d9415dad508b7f111') as `0x${string}`
+  '0x3a8396D2c8f5aA22b382b9DB03517CB453190334') as `0x${string}`
 
 // Retired-address guard (added session v55, same pattern as PASS_SBT_ADDRESS
 // above — that guard caught a real live misconfiguration this session, so
@@ -119,14 +117,14 @@ if (
   console.error(
     `[NullState] REWARD_CONTRACT_ADDRESS (${REWARD_CONTRACT_ADDRESS}) is a RETIRED ` +
       `NullStateReward contract. Fix: update NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS in ` +
-      `Vercel's env vars to 0xec2e7fe57a92ada02c1ab37d9415dad508b7f111 (or remove the var ` +
+      `Vercel's env vars to 0x3a8396D2c8f5aA22b382b9DB03517CB453190334 (or remove the var ` +
       `entirely so the hardcoded fallback above is used), then redeploy.`
   )
 }
 
 export const TREASURE_VAULT_ADDRESS = (process.env
   .NEXT_PUBLIC_TREASURE_VAULT_ADDRESS ||
-  '0xB145dE296cD37Cb2A62Ced70Ee4d93c1d78df742') as `0x${string}`
+  '0x0Bf0F45774848A9d4B9cC672b247f575A5822638') as `0x${string}`
 
 // Retired-address guard (added session v55) — same rationale as
 // RETIRED_REWARD_ADDRESSES above. TreasureVault.sol (v1) was retired in
@@ -140,16 +138,17 @@ if (
   console.error(
     `[NullState] TREASURE_VAULT_ADDRESS (${TREASURE_VAULT_ADDRESS}) is a RETIRED ` +
       `TreasureVault contract. Fix: update NEXT_PUBLIC_TREASURE_VAULT_ADDRESS in ` +
-      `Vercel's env vars to 0xB145dE296cD37Cb2A62Ced70Ee4d93c1d78df742 (or remove the var ` +
+      `Vercel's env vars to 0x0Bf0F45774848A9d4B9cC672b247f575A5822638 (or remove the var ` +
       `entirely so the hardcoded fallback above is used), then redeploy.`
   )
 }
 
 // ---- X Layer TESTNET (chain 1952) — redeployed 2026-11-11 after the
-// reward-token identifier rename. TESTNET-ONLY: the app defaults to
-// mainnet (chain 196) via the env vars / fallbacks above; these constants
-// are for local testnet runs and admin scripts only. Do NOT use them as
-// mainnet fallbacks.
+// reward-token identifier rename. The app now DEFAULTS to testnet: the
+// fallbacks above are these same addresses, so the TESTNET_* constants
+// below are aliases kept for scripts and admin tooling that reference
+// them by name. Mainnet (chain 196) has no deployment of these contracts
+// yet — do NOT point the app at mainnet.
 export const TESTNET_TUSD_ADDRESS = '0x3FF2324b603C079dD17506858856a9e4ab4AF4e9' as `0x${string}`
 export const TESTNET_PASS_SBT_ADDRESS = '0x52Fa686f14849B69309b8772EcE8051D508f7B98' as `0x${string}`
 export const TESTNET_REWARD_CONTRACT_ADDRESS = '0x3a8396D2c8f5aA22b382b9DB03517CB453190334' as `0x${string}`

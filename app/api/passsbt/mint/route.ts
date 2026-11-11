@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeEventLog, parseAbi, getAddress, createWalletClient } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { xLayerChain, xlayerTransport } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain, xlayerTestnetTransport } from '@/lib/xlayerRpc'
 import { publicClient } from '@/lib/web3-client'
 import { getAdminDb } from '@/firebase-config'
 import { maybeGiftReferralPass } from '@/lib/server/referrals'
@@ -17,17 +17,17 @@ import { PASS_SBT_ADDRESS, PASS_SBT_ABI, getPassPriceUsd } from '@/lib/contract-
 //   - wallet   : buyer address
 //   - txHash   : the ERC20 transfer() tx to the treasury (0.30 USD equiv.)
 //   - seasonId : which season to mint (e.g. 202607)
-//   - token    : 'USDC' | 'USDT'
+//   - token    : 'USDC' | 'USDT' | 'TUSD' (tUSD on the testnet deployment)
 //
 // v2.1 (this session): PassSBTv2's mintPaidPass() used to pull a fixed
 // amount on-chain via transferFrom(). That's gone — instead this
 // mirrors app/api/marketplace/verify/route.ts exactly: the frontend sends
-// a plain ERC20 transfer() of 0.30 USD (in whichever of USDC/USDT the
-// wallet holds most of) to TREASURY_WALLET, this route verifies that
+// a plain ERC20 transfer() of 0.30 USD (in whichever accepted token the
+// wallet holds most of — tUSD on the testnet deployment) to TREASURY_WALLET, this route verifies that
 // transfer really happened on-chain, hasn't been used before, and the
 // season/user state is still valid — then, unlike Marketplace (which just
 // records offchain ownership in Firebase), this route ALSO calls the new
-// PassSBTv2.backendMintPass(wallet, seasonId) on-chain using the same
+// PassSBTv3.backendMintPass(wallet, seasonId) on-chain using the same
 // BACKEND_PRIVATE_KEY signer already used by /api/vault/submit, so the
 // user actually receives the soulbound NFT.
 //
@@ -194,8 +194,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Backend signer not configured' }, { status: 503 })
     }
     const account = privateKeyToAccount(backendPrivateKey)
-    const transport = xlayerTransport()
-    const walletClient = createWalletClient({ chain: xLayerChain, transport, account })
+    const transport = xlayerTestnetTransport()
+    const walletClient = createWalletClient({ chain: xLayerTestnetChain, transport, account })
 
     let mintHash: `0x${string}`
     try {

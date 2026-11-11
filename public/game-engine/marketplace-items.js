@@ -5,10 +5,11 @@
 // window.NS_MARKET. Owner can add new equipment by appending to EQUIPMENT.
 //
 // Design (agreed in build discussion):
-//  • Purchases are paid as a plain ERC20 transfer() of USDC / USDT0 on
-//    X Layer to the TREASURY wallet (NO smart contract needed). Ownership is
-//    recorded OFFCHAIN (Firebase), the payment tx is the on-chain proof and
-//    is verified server-side before unlock.
+//  • Purchases are paid as a plain ERC20 transfer() of USDC / USDT0 / tUSD
+//    on X Layer to the TREASURY wallet (NO smart contract needed). tUSD is
+//    the token on the testnet deployment; USDC / USDT0 are the mainnet
+//    tokens. Ownership is recorded OFFCHAIN (Firebase), the payment tx is
+//    the on-chain proof and is verified server-side before unlock.
 //  • Equipment is PERMANENT (never consumed), can be equipped/unequipped.
 //  • Food (loot ids 321–515) is CONSUMABLE: Eat -> heal % of maxHp by rarity.
 //  • FX tier drives attack visual richness (higher price = flashier effect).
@@ -17,14 +18,19 @@
 (function () {
   'use strict';
 
-  // ── Treasury + accepted tokens (X Layer mainnet 196) ──────────────────────
+  // ── Treasury + accepted tokens (X Layer Testnet 1952 — the demo runs on
+  // testnet; USDC / USDT0 below are the mainnet tokens, kept for parity
+  // with the TS table) ───────────────────────────────────────────────────
   var TREASURY = '0xAb73e0E942ecAAF634216EFb78786fa0F92f2eb6';
 
   // USDT0 is Tether's bridged USDT on X Layer; players see it as USDT.
+  // tUSD is the testnet reward token — the token players hold and pay with
+  // on the testnet deployment.
   // Mirror of lib/constants/tokens.ts MARKETPLACE_TOKENS — keep in sync.
   var TOKENS = {
     USDC:  { address: '0xB6CEceAB302E2E4948951eE7843FC24E92933061', decimals: 6 },
     USDT0: { address: '0x779Ded0c9e1022225f8E0630b35a9b54bE713736', decimals: 6 },
+    TUSD:  { address: '0x3ff2324b603c079dd17506858856a9e4ab4af4e9', decimals: 6 },
   };
 
   // ── Equipment slots ──────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 'use client'
 
 import { PrivyProvider } from '@privy-io/react-auth'
-import { xLayerChain } from '@/lib/xlayerRpc'
+import { xLayerTestnetChain } from '@/lib/xlayerRpc'
 import { privyAppId } from '@/lib/privySignerBridge'
 import PrivySignerPublisher from './PrivySignerPublisher'
 
@@ -18,7 +18,7 @@ import PrivySignerPublisher from './PrivySignerPublisher'
 // through lib/privySignerBridge, which is why nothing remounts when it arrives
 // a second after the map.
 //
-// The config is pinned to X Layer — `defaultChain` decides where an embedded
+// The config is pinned to X Layer Testnet — `defaultChain` decides where an embedded
 // wallet is CREATED, `supportedChains` is what an external wallet is asked to
 // be on — using the same chain object lib/WagmiIsland.tsx gives wagmi, so
 // there is exactly one idea of which network this game runs on.
@@ -37,8 +37,8 @@ export default function PrivySignerIsland() {
         loginMethods: ['google', 'email', 'wallet'],
         appearance: { theme: 'dark', accentColor: '#39ff9a' },
         embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
-        defaultChain: xLayerChain,
-        supportedChains: [xLayerChain],
+        defaultChain: xLayerTestnetChain,
+        supportedChains: [xLayerTestnetChain],
       }}
     >
       <PrivySignerPublisher />

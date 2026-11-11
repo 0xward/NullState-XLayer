@@ -122,3 +122,14 @@ export function xlayerTransport(): Transport {
   const urls = xlayerRpcUrls()
   return urls.length === 1 ? http(urls[0]) : fallback(urls.map(u => http(u)))
 }
+
+/**
+ * Transport for every X Layer TESTNET (chain 1952) read/write in the app.
+ * The demo runs on testnet, so this is the transport the app's reads and
+ * writes use by default — see lib/web3-client.ts and lib/server/vaultChain.ts.
+ * Single public endpoint, same as the wagmi testnet transport in
+ * lib/WagmiIsland.tsx; no env knob (the testnet RPC needs no key).
+ */
+export function xlayerTestnetTransport(): Transport {
+  return http(DEFAULT_XLAYER_TESTNET_RPC)
+}

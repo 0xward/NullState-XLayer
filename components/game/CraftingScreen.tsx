@@ -103,7 +103,7 @@ export default function CraftingScreen({ onBack, onGoToRun, address }: CraftingS
   // screen is not inside WagmiProvider and calling its hooks here would throw.
   // Null until wagmi has loaded; the effect below already handles that.
   const publicClient = wallet.publicClient
-  const [token, setToken] = useState<MarketplaceTokenSymbol>('USDC')
+  const [token, setToken] = useState<MarketplaceTokenSymbol>('TUSD')
   // Flexible stablecoin (Phase 2): default the pay-with token to the largest
   // balance the wallet holds; the manual selector still overrides.
   const manualTokenRef = useRef(false)
