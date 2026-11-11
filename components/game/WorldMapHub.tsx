@@ -466,7 +466,15 @@ export default function WorldMapHub({
               itself. The skeleton holds the same box at the same size and
               stays quiet until there is something true to put in it. */}
           {nameUnknown
-            ? <span className="ns-hub-name ns-hub-name--skeleton" aria-label="Loading player name" />
+            // Neutral while loading: this is a visual shimmer, not content,
+            // so it must not carry an accessible name of its own. (It used to
+            // say aria-label="Loading player name", which an accessibility
+            // audit then reported as the plate's name even after the real
+            // username had loaded — the loaded name below already exposes
+            // itself as text.) Same aria-hidden as the level skeleton next
+            // to it; the button itself already announces "Open character
+            // sheet".
+            ? <span className="ns-hub-name ns-hub-name--skeleton" aria-hidden="true" />
             : <span className="ns-hub-name">{hasSave ? playerProfile!.username.toUpperCase() : 'WALKER'}</span>}
           {/* Same reasoning as the name: "NEW SIGNAL" flipping to "LV 3" a
               second later tells the player they were briefly someone else. */}
