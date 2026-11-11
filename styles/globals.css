@@ -1,0 +1,741 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --null-bg: #020a06;
+  --null-surface: #040f08;
+  --null-green: #00ff88;
+  --null-green-dim: #00cc6a;
+  --null-green-dark: #004422;
+  --null-acid: #a8ff3e;
+  --null-red: #ff2244;
+  --null-amber: #ffaa00;
+  --null-blue: #00aaff;
+  --null-white: #d4ffe8;
+  --null-muted: #a0c9b4; /* was #5f8873 — bumped again (~9:1) for readable body/legal text on desktop (Susanne+Dan: docs low contrast) */
+  --null-border: rgba(0,255,136,0.15);
+  --null-glow: 0 0 20px rgba(0,255,136,0.3);
+  --null-glow-strong: 0 0 40px rgba(0,255,136,0.5), 0 0 80px rgba(0,255,136,0.2);
+  --null-glow-red: 0 0 20px rgba(255,34,68,0.4);
+  /* --font-mono, --font-hud, --font-display, --font-cinzel disuplai oleh
+     next/font/google lewat class di <html> (lihat lib/fonts.ts +
+     app/layout.tsx) — self-hosted, no external network request. */
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--null-bg);
+  color: var(--null-white);
+  font-family: var(--font-hud);
+  overflow-x: hidden;
+}
+
+/* The JS custom cursor was removed (Susanne & Dan: cursor disappears on
+   desktop). Nothing hides the OS cursor any more — the native cursor is the
+   single, reliable cursor on every route. */
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--null-bg); }
+::-webkit-scrollbar-thumb { background: rgba(0,255,136,0.2); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,255,136,0.4); }
+
+/* GLOBAL SCANLINE OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+::selection {
+  background: rgba(0,255,136,0.2);
+  color: var(--null-green);
+}
+
+/* CLIP PATHS */
+.clip-button    { clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+.clip-button-sm { clip-path: polygon(8px 0,  100% 0, calc(100% - 8px)  100%, 0 100%); }
+
+/* GLOW UTILITIES */
+.glow-green        { text-shadow: var(--null-glow); }
+.glow-green-strong { text-shadow: var(--null-glow-strong); }
+.box-glow          { box-shadow: var(--null-glow); }
+.box-glow-strong   { box-shadow: var(--null-glow-strong); }
+.box-glow-red      { box-shadow: var(--null-glow-red); }
+
+/* GRID BG */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ─────────────────────────────────────────────
+   REVEAL ANIMATION
+   ───────────────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─────────────────────────────────────────────
+   TERMINAL SCAN LINE
+   ───────────────────────────────────────────── */
+.terminal-scan::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--null-green), transparent);
+  animation: scanH 3s linear infinite;
+}
+@keyframes scanH {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ─────────────────────────────────────────────
+   TYPING CURSOR
+   ───────────────────────────────────────────── */
+.t-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--null-green);
+  animation: blinkStep 1s step-end infinite;
+  vertical-align: middle;
+}
+@keyframes blinkStep {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────
+   SPRITE ANIMATIONS — all stepped, no easing
+   ───────────────────────────────────────────── */
+
+/* Idle bob — stepped quantised y-axis float */
+@keyframes spriteIdle {
+  0%   { transform: translateY(0px); }
+  14%  { transform: translateY(0px); }
+  28%  { transform: translateY(-3px); }
+  42%  { transform: translateY(-5px); }
+  56%  { transform: translateY(-3px); }
+  70%  { transform: translateY(0px); }
+  84%  { transform: translateY(-2px); }
+  100% { transform: translateY(0px); }
+}
+
+.sprite-idle {
+  animation: spriteIdle 2s steps(7) infinite;
+  image-rendering: pixelated;
+}
+
+/* Enemy idle (mirrored) */
+@keyframes spriteIdleEnemy {
+  0%   { transform: scaleX(-1) translateY(0px); }
+  14%  { transform: scaleX(-1) translateY(0px); }
+  28%  { transform: scaleX(-1) translateY(-3px); }
+  42%  { transform: scaleX(-1) translateY(-5px); }
+  56%  { transform: scaleX(-1) translateY(-3px); }
+  70%  { transform: scaleX(-1) translateY(0px); }
+  84%  { transform: scaleX(-1) translateY(-2px); }
+  100% { transform: scaleX(-1) translateY(0px); }
+}
+
+.sprite-idle-enemy {
+  animation: spriteIdleEnemy 2s steps(7) infinite;
+  image-rendering: pixelated;
+}
+
+/* Attack — stepped lunge forward */
+@keyframes spriteAttack {
+  0%   { transform: translateX(0); }
+  33%  { transform: translateX(22px); }
+  66%  { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+
+.sprite-attack {
+  animation: spriteAttack 0.5s steps(3) forwards;
+  image-rendering: pixelated;
+}
+
+/* Hit flash — stepped brightness + knockback */
+@keyframes spriteHit {
+  0%   { filter: brightness(1); transform: translateX(0); }
+  25%  { filter: brightness(5) drop-shadow(0 0 10px #ff2244); transform: translateX(-8px); }
+  50%  { filter: brightness(2); transform: translateX(4px); }
+  75%  { filter: brightness(1.5); transform: translateX(-2px); }
+  100% { filter: brightness(1); transform: translateX(0); }
+}
+
+.sprite-hit {
+  animation: spriteHit 0.5s steps(4) forwards;
+  image-rendering: pixelated;
+}
+
+/* Enemy hit (mirrored) */
+@keyframes spriteHitEnemy {
+  0%   { filter: brightness(1);  transform: scaleX(-1) translateX(0); }
+  25%  { filter: brightness(5) drop-shadow(0 0 10px #ff2244); transform: scaleX(-1) translateX(8px); }
+  50%  { filter: brightness(2);  transform: scaleX(-1) translateX(-4px); }
+  100% { filter: brightness(1);  transform: scaleX(-1) translateX(0); }
+}
+
+.sprite-hit-enemy {
+  animation: spriteHitEnemy 0.5s steps(3) forwards;
+  image-rendering: pixelated;
+}
+
+/* Death — stepped topple */
+@keyframes spriteDeath {
+  0%   { opacity: 1; transform: scaleX(-1) rotate(0deg)   translateY(0); }
+  33%  { opacity: 0.8; transform: scaleX(-1) rotate(-30deg) translateY(6px); }
+  66%  { opacity: 0.4; transform: scaleX(-1) rotate(-70deg) translateY(14px); }
+  100% { opacity: 0; transform: scaleX(-1) rotate(-90deg) translateY(22px); }
+}
+
+.sprite-death {
+  animation: spriteDeath 0.8s steps(3) forwards;
+  image-rendering: pixelated;
+}
+
+/* Boss idle — heavier, wider bob */
+@keyframes bossIdle {
+  0%   { transform: translateY(0px); }
+  10%  { transform: translateY(0px); }
+  25%  { transform: translateY(-4px); }
+  40%  { transform: translateY(-8px); }
+  55%  { transform: translateY(-8px); }
+  70%  { transform: translateY(-4px); }
+  85%  { transform: translateY(0px); }
+  100% { transform: translateY(0px); }
+}
+
+.boss-idle {
+  animation: bossIdle 2.4s steps(7) infinite;
+  image-rendering: pixelated;
+}
+
+/* Boss hit shake */
+@keyframes bossShake {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-4px) rotate(-1deg); }
+  50%  { transform: translateX(4px)  rotate(1deg); }
+  75%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+.boss-hit {
+  animation: bossShake 0.4s steps(4);
+  image-rendering: pixelated;
+}
+
+/* ─────────────────────────────────────────────
+   SCREEN SHAKE — stepped
+   ───────────────────────────────────────────── */
+@keyframes screenShake {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(-4px, 2px); }
+  40%  { transform: translate(4px, -2px); }
+  60%  { transform: translate(-3px, 3px); }
+  80%  { transform: translate(3px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.screen-shake {
+  animation: screenShake 0.4s steps(4);
+}
+
+/* ─────────────────────────────────────────────
+   DAMAGE NUMBER
+   ───────────────────────────────────────────── */
+@keyframes damageFloat {
+  0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+  20%  { transform: translateY(-12px) scale(1.3); opacity: 1; }
+  80%  { transform: translateY(-50px) scale(1); opacity: 1; }
+  100% { transform: translateY(-70px) scale(0.8); opacity: 0; }
+}
+
+.damage-number {
+  animation: damageFloat 1.2s steps(8) forwards;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   HP BAR — stepped fill transition
+   ───────────────────────────────────────────── */
+.health-bar-fill {
+  transition: width 0.5s steps(20);
+}
+
+/* ─────────────────────────────────────────────
+   MENU PULSE — stepped glow
+   ───────────────────────────────────────────── */
+@keyframes menuPulseStep {
+  0%, 49% { box-shadow: 0 0 0 1px rgba(0,255,136,0.4); }
+  50%, 100% { box-shadow: 0 0 0 1px rgba(0,255,136,0.8), 0 0 20px rgba(0,255,136,0.3); }
+}
+
+.menu-pulse {
+  animation: menuPulseStep 2s step-end infinite;
+}
+
+/* ─────────────────────────────────────────────
+   PARTICLE FLOAT
+   ───────────────────────────────────────────── */
+@keyframes particleFloat {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(-100px) translateX(var(--drift, 20px)); opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────
+   HERO ORB PULSE — stepped
+   ───────────────────────────────────────────── */
+@keyframes orbPulse {
+  0%, 49% { transform: translate(-50%,-50%) scale(1);   opacity: 0.6; }
+  50%, 100% { transform: translate(-50%,-50%) scale(1.08); opacity: 1; }
+}
+
+/* ─────────────────────────────────────────────
+   SCROLL INDICATOR
+   ───────────────────────────────────────────── */
+@keyframes scrollLine {
+  0%   { transform: scaleY(1);   transform-origin: top; }
+  50%  { transform: scaleY(0.3); transform-origin: bottom; }
+  100% { transform: scaleY(1);   transform-origin: top; }
+}
+
+.scroll-line {
+  animation: scrollLine 2s steps(4) infinite;
+}
+
+/* ─────────────────────────────────────────────
+   TICKER
+   ───────────────────────────────────────────── */
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-wrap  { overflow: hidden; white-space: nowrap; }
+.ticker-inner { display: inline-block; animation: tickerScroll 20s linear infinite; }
+
+/* ─────────────────────────────────────────────
+   NAV
+   ───────────────────────────────────────────── */
+.nav-blur {
+  background: rgba(2,10,6,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ─────────────────────────────────────────────
+   CUSTOM CURSOR
+   ───────────────────────────────────────────── */
+#cursor {
+  position: fixed;
+  width: 20px; height: 20px;
+  border: 1px solid var(--null-green);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  /* No smooth transition — snappy update via JS */
+  mix-blend-mode: screen;
+}
+
+#cursor-dot {
+  position: fixed;
+  width: 4px; height: 4px;
+  background: var(--null-green);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 6px var(--null-green);
+}
+
+/* ─────────────────────────────────────────────
+   GAME PHONE MOCKUP
+   ───────────────────────────────────────────── */
+.game-phone {
+  position: relative;
+  width: 320px;
+  border: 2px solid rgba(0,255,136,0.25);
+  background: #010805;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 0 60px rgba(0,255,136,0.15),
+    0 0 120px rgba(0,255,136,0.05),
+    inset 0 0 40px rgba(0,0,0,0.5);
+}
+
+.phone-glow {
+  position: absolute;
+  inset: -60px;
+  background: radial-gradient(ellipse at center, rgba(0,255,136,0.12) 0%, rgba(0,170,255,0.04) 40%, transparent 70%);
+  filter: blur(40px);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   CARD / SECTION COMPONENTS
+   ───────────────────────────────────────────── */
+.about-card {
+  border: 1px solid rgba(0,255,136,0.1);
+  background: rgba(0,255,136,0.02);
+  transition: all 0.3s;
+}
+.about-card:hover {
+  border-color: rgba(0,255,136,0.25);
+  background: rgba(0,255,136,0.04);
+  transform: translateY(-4px);
+}
+
+.faq-item {
+  border-bottom: 1px solid rgba(0,255,136,0.08);
+  transition: all 0.3s;
+}
+.faq-item.open {
+  border-color: rgba(0,255,136,0.2);
+}
+
+/* ─────────────────────────────────────────────
+   PIXEL BORDER — game arena
+   ───────────────────────────────────────────── */
+.pixel-border {
+  box-shadow:
+    0 0 0 2px rgba(0,255,136,0.4),
+    0 0 0 4px rgba(0,255,136,0.1),
+    inset 0 0 40px rgba(0,0,0,0.6);
+}
+
+/* ─────────────────────────────────────────────
+   CRT SCANLINES (in-arena overlay)
+   ───────────────────────────────────────────── */
+.crt-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   ACTION BUTTON SHIMMER
+   ───────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--null-green) 0%,
+    var(--null-acid) 50%,
+    var(--null-green) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+/* The .menu-btn rule set lived here and is gone: nothing in the app has used
+   the class since MainMenu was rebuilt, and its buttons now carry Tailwind
+   utilities directly. It was also the last consumer of --btn-c, a token no
+   stylesheet ever declared — the comment claimed MainMenu set it inline, and
+   MainMenu did not. Dead rules depending on a token that does not exist is a
+   trap for whoever revives them. */
+
+
+
+@keyframes rotateCW {
+  from { transform: translate(-50%,-50%) rotate(0deg); }
+  to   { transform: translate(-50%,-50%) rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────
+   FADE UP (hero section stagger)
+   ───────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ─────────────────────────────────────────────
+   v80 — GLOBAL SMOOTHNESS PASS (owner request)
+   Landing page + dashboard menu + every click.
+   Content-neutral: only motion/feedback, no layout changes.
+   ───────────────────────────────────────────── */
+
+/* Every interactive element gets a soft hover/press response. The press
+   (scale-down) is the "every click feels alive" beat; keep it subtle so
+   MiniPay tap targets don't visually jump. */
+/* Only compositable properties are transitioned. This list used to also carry
+   box-shadow, background-color, border-color and color; PageSpeed's
+   "non-composited animation" audit named the sound button's `color` fade
+   specifically, and it is right — every one of those forces a repaint of the
+   element on every frame of a 200ms transition, on phones that are already the
+   slowest thing in the pipeline. transform and opacity run on the compositor,
+   and `filter: brightness()` (the actual hover response below) is GPU work
+   rather than a layout-affecting repaint. Colour changes still happen; they
+   just land at once, which on a toggle like mute reads as crisper anyway. */
+button, a, [role='button'], .menu-btn {
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.16s ease,
+    filter 0.2s ease;
+}
+button:not(:disabled):hover, a:hover, [role='button']:hover { filter: brightness(1.08); }
+button:not(:disabled):active, a:active, [role='button']:active {
+  transform: scale(0.965);
+  filter: brightness(0.94);
+  transition-duration: 0.06s;
+}
+
+/* Page/section entrance — used by the dashboard menu and any screen that
+   opts in. Two speeds: the wrapper fades, the content rises. */
+@keyframes nsPageFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nsRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ns-fade-in { animation: nsPageFade 0.45s ease both; }
+.ns-rise    { animation: nsRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.ns-rise-1  { animation: nsRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
+.ns-rise-2  { animation: nsRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
+.ns-rise-3  { animation: nsRise 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both; }
+
+/* Landing cloud banks. Soft radial blobs on an over-wide element that slides
+   sideways, so the drift never shows a seam. Two instances at different sizes
+   and opposite directions — one layer alone reads as a texture sliding past;
+   two moving against each other read as weather. */
+/* ─── Landing backdrop: alive, not a photograph ────────────────────────────
+   The still frame read as dead, and the clouds that were supposed to fix that
+   were invisible in practice: alpha 0.11–0.15 under a 26–38px blur, sitting
+   BEHIND the vignette, drifting 28% over 74 seconds — about 0.4% of the
+   viewport per second. Technically animated, perceptually a JPEG.
+
+   Three layers now, all transform/opacity only so they stay on the compositor
+   and cost nothing on the main thread (PERF-6 was exactly this lesson):
+     1. the backdrop itself slowly pushes in and pans   — the depth cue
+     2. clouds, brighter and faster                     — the mid-ground
+     3. embers rising                                   — the foreground tell
+
+   Embers are the same idiom as the world map's .ns-hub-motes on purpose: the
+   landing page and the game should look like one place. */
+
+/* 1. Backdrop. Was a static inline transform: scale(1.06). A slow push-in with
+      a little lateral drift is the cheapest possible parallax — one element,
+      one composited property, no image work. 52s and eased so it never reads
+      as a loop; alternate so it breathes in and out instead of snapping back. */
+.ns-hero-bg {
+  filter: brightness(.46) saturate(.85) blur(2px);
+  transform: scale(1.06);
+  animation: nsHeroPush 52s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes nsHeroPush {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to   { transform: scale(1.15) translate3d(-1.6%, -1.1%, 0); }
+}
+
+/* 3. Embers. One element, gradient dots on a strip tiled vertically, scrolled
+      by exactly half its height so the loop is seamless. Sits under the
+      vignette so they fade out at the edges rather than ending abruptly. */
+.ns-hero-motes {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 200%;
+  pointer-events: none;
+  opacity: .55;
+  background-image:
+    radial-gradient(2.2px 2.2px at 14% 9%,  rgba(150, 255, 200, .85), transparent 100%),
+    radial-gradient(1.6px 1.6px at 68% 17%, rgba(120, 235, 180, .70), transparent 100%),
+    radial-gradient(2.6px 2.6px at 37% 31%, rgba(175, 255, 215, .80), transparent 100%),
+    radial-gradient(1.8px 1.8px at 86% 39%, rgba(130, 240, 190, .65), transparent 100%),
+    radial-gradient(2.0px 2.0px at 24% 47%, rgba(160, 255, 205, .75), transparent 100%),
+    radial-gradient(1.5px 1.5px at 57% 21%, rgba(200, 255, 230, .60), transparent 100%);
+  background-repeat: repeat-y;
+  background-size: 100% 50%;
+  animation: nsHeroMotes 38s linear infinite;
+  will-change: transform;
+}
+@keyframes nsHeroMotes {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* 2. Clouds. Same shapes, roughly 1.7x the alpha and a shorter cycle, which is
+      the difference between "a still image" and "weather". */
+.ns-hero-cloud {
+  position: absolute;
+  top: -12%;
+  left: -60%;
+  width: 220%;
+  height: 90%;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 46% at 18% 42%, rgba(150, 190, 175, 0.26) 0%, transparent 62%),
+    radial-gradient(30% 40% at 45% 62%, rgba(130, 175, 160, 0.21) 0%, transparent 60%),
+    radial-gradient(42% 38% at 74% 36%, rgba(160, 200, 185, 0.23) 0%, transparent 64%);
+  filter: blur(26px);
+  animation: nsCloudDrift 44s linear infinite;
+  will-change: transform;
+}
+.ns-hero-cloud-b {
+  top: 18%;
+  height: 78%;
+  opacity: 0.8;
+  background:
+    radial-gradient(34% 42% at 28% 50%, rgba(120, 160, 150, 0.24) 0%, transparent 60%),
+    radial-gradient(46% 34% at 66% 40%, rgba(145, 185, 170, 0.19) 0%, transparent 62%);
+  filter: blur(38px);
+  animation: nsCloudDrift 68s linear infinite reverse;
+}
+@keyframes nsCloudDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(28%); }
+}
+
+/* ─── Hero logo: signal breakup ────────────────────────────────────────────
+   Chromatic aberration on a burst timer. Two tinted copies of the same file
+   sit exactly on top of the original at opacity 0 and stay that way for about
+   six and a half of every seven seconds; the burst is four stepped frames
+   where they jump apart, each clipped to a different horizontal band so the
+   logo appears to tear rather than simply blur.
+
+   Intermittent on purpose. A logo that glitches CONTINUOUSLY stops reading as
+   a broken signal and starts reading as a broken stylesheet — and it is
+   exhausting to sit under while someone decides whether to press PLAY. The
+   navbar wordmark already works this way (0.6s of jitter, 4s of stillness);
+   this is the same rhythm at hero scale, so the two agree.
+
+   steps(1) everywhere, deliberately. Interpolating between these frames gives
+   a smooth slide, which looks like the logo is floating. Digital tearing
+   snaps — it has no in-between states.
+
+   The copies are the same src as the original, so they are one cache hit and
+   zero extra bytes over the wire. screen blending over a dark backdrop makes
+   the offsets glow instead of muddying. */
+.ns-logo-glitch { position: relative; display: block; }
+.ns-logo-glitch > img { display: block; width: 100%; height: auto; }
+
+.ns-logo-g {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+}
+/* Magenta ghost, leading. grayscale first flattens the logo's own green and
+   white so the hue-rotate lands somewhere predictable instead of being pulled
+   around by the source colours — without it, -38deg came out gold.
+   Magenta paired with cyan below is the actual chromatic-aberration pair (a
+   red and blue channel offset together read as magenta), and it stays cool,
+   which the amber version did not: gold is nowhere in this game's palette and
+   read as warm film damage rather than a digital signal fault. */
+.ns-logo-g-a {
+  filter: grayscale(1) sepia(1) saturate(9) hue-rotate(-95deg) brightness(1.05);
+  animation: nsLogoGlitchA 7.2s steps(1) -5.6s infinite;
+}
+/* Cyan ghost, trailing the other way — the offset pair is what the eye reads
+   as chromatic aberration rather than as a drop shadow. */
+.ns-logo-g-b {
+  filter: sepia(1) saturate(7) hue-rotate(142deg) brightness(1.15);
+  animation: nsLogoGlitchB 7.2s steps(1) -5.6s infinite;
+}
+/* The original shifts a pixel or two on the same beats. Without this the
+   ghosts look like they are sliding out from behind something stationary. */
+.ns-logo-base { animation: nsLogoShift 7.2s steps(1) -5.6s infinite; }
+
+/* ─── Why all three carry -5.6s ────────────────────────────────────────────
+   The burst lives at 91–98% of a 7.2s cycle, so without a delay the first one
+   lands 6.6 seconds after the page opens — by which time most people have
+   already decided what this page is, and a good number have already tapped
+   PLAY. The effect was shipping to almost nobody.
+
+   A negative delay starts the animation mid-cycle. -5.6s puts the clock at
+   5.6s on the first frame, so the burst fires at t≈0.95s: immediately after
+   the logo's own fadeUp finishes at 0.85s, which is the earliest it can happen
+   without glitching something that is still fading in. Every burst after that
+   is on the normal 7.2s cadence.
+
+   Identical on all three so the ghosts and the base stay in lockstep. */
+
+@keyframes nsLogoGlitchA {
+  0%, 91%  { opacity: 0;   transform: translate3d(0, 0, 0);      clip-path: inset(0 0 0 0); }
+  92%      { opacity: .95; transform: translate3d(-4px, 1px, 0); clip-path: inset(12% 0 61% 0); }
+  93.6%    { opacity: .85; transform: translate3d(5px, -1px, 0); clip-path: inset(47% 0 24% 0); }
+  95.2%    { opacity: .9;  transform: translate3d(-6px, 0, 0);   clip-path: inset(69% 0 6% 0); }
+  96.8%    { opacity: .7;  transform: translate3d(3px, 2px, 0);  clip-path: inset(2% 0 80% 0); }
+  98%, 100%{ opacity: 0;   transform: translate3d(0, 0, 0);      clip-path: inset(0 0 0 0); }
+}
+@keyframes nsLogoGlitchB {
+  0%, 91%  { opacity: 0;   transform: translate3d(0, 0, 0);      clip-path: inset(0 0 0 0); }
+  92%      { opacity: .95; transform: translate3d(5px, -1px, 0); clip-path: inset(30% 0 44% 0); }
+  93.6%    { opacity: .85; transform: translate3d(-5px, 1px, 0); clip-path: inset(60% 0 14% 0); }
+  95.2%    { opacity: .9;  transform: translate3d(6px, 0, 0);    clip-path: inset(6% 0 74% 0); }
+  96.8%    { opacity: .7;  transform: translate3d(-3px, -2px, 0);clip-path: inset(52% 0 30% 0); }
+  98%, 100%{ opacity: 0;   transform: translate3d(0, 0, 0);      clip-path: inset(0 0 0 0); }
+}
+@keyframes nsLogoShift {
+  0%, 91%   { transform: translate3d(0, 0, 0); }
+  92%       { transform: translate3d(1px, 0, 0); }
+  93.6%     { transform: translate3d(-2px, 0, 0); }
+  95.2%     { transform: translate3d(2px, 0, 0); }
+  96.8%     { transform: translate3d(-1px, 0, 0); }
+  98%, 100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Anyone who asked the OS for less motion gets exactly that. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .ns-fade-in, .ns-rise, .ns-rise-1, .ns-rise-2, .ns-rise-3 { animation: none; }
+  /* The clouds stay put rather than disappearing — reduced motion means stop
+     moving, not stop existing. Same for the embers and the backdrop push: the
+     scene keeps every layer, it just holds still. */
+  .ns-hero-cloud, .ns-hero-cloud-b, .ns-hero-motes { animation: none; }
+  .ns-hero-bg { animation: none; transform: scale(1.06); }
+  /* The logo glitch is the one layer that DOES disappear rather than freeze.
+     Frozen mid-burst it is not a still logo, it is a broken one — the ghosts
+     would sit permanently offset with no way to read them as an effect. */
+  .ns-logo-base { animation: none; }
+  .ns-logo-g { animation: none; opacity: 0; }
+  button, a, [role='button'], .menu-btn { transition: none; }
+  button:not(:disabled):active, a:active, [role='button']:active { transform: none; }
+}

@@ -1,0 +1,128 @@
+name: checks
+
+# Guards for the parts of NullState that nothing else was checking.
+#
+# Deliberately NOT a full build: `next build` is already run by Vercel on every
+# push, so repeating it here would double the wait and tell us nothing new. What
+# this job covers is the opposite — things Vercel's build does NOT catch:
+#
+#   1. The two marketplace price lists drifting apart (see the job's comment)
+#   2. Syntax errors in public/game-engine/*.js, which are NOT part of the
+#      Next.js build at all — they are plain <script> files served from public/,
+#      so a stray typo compiles fine, deploys fine, and breaks the game on the
+#      player's device
+#   3. Type errors — next.config.js sets eslint.ignoreDuringBuilds, and a build
+#      that ignores checks is a build that cannot fail on them
+#
+# `npm run lint` is deliberately absent: the repo carries ~20 files of
+# pre-existing lint findings, so adding it would make CI red from day one and
+# train everyone to ignore it. Worth fixing separately, not worth blocking on.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same PR makes the previous run pointless — don't pay for it.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` rather than `npm install` — installs exactly what
+      # package-lock.json pins, so CI can never pass against a dependency tree
+      # nobody else has.
+      - name: Install dependencies
+        run: npm ci
+
+      # Marketplace items are declared TWICE by design: the TypeScript source of
+      # truth (React + the server-side purchase/swap verifiers) and the engine's
+      # mirror, which is loaded by <script> tag and therefore cannot import a TS
+      # module. Until this check existed the two were kept in sync by a comment
+      # asking nicely — and they had already drifted. Drift here is not
+      # cosmetic: the shop card and the engine would quote different prices for
+      # the same sword, and only one of them is what the verifier charges.
+      - name: Marketplace price lists in sync
+        run: npm run check:market
+
+      # The 14 engine files are the game itself and are invisible to the Next.js
+      # build. Nothing else parses them before they reach a player.
+      # -maxdepth 1 skips min/, which is build output and gets its own check.
+      - name: Game engine parses
+        run: |
+          for f in $(find public/game-engine -maxdepth 1 -name '*.js'); do
+            node --check "$f" || exit 1
+          done
+          echo "✓ all $(find public/game-engine -maxdepth 1 -name '*.js' | wc -l) engine files parse"
+
+      # Production serves the minified engine (scripts/minify-game-engine.js).
+      # A file terser cannot handle is skipped rather than shipped broken, so
+      # the failure mode is silent: the game keeps working and quietly gets
+      # slower. This makes it loud — if the minifier starts skipping files, CI
+      # says so here rather than nobody noticing for six months.
+      - name: Game engine minifies
+        run: |
+          npm run build:engine | tee /tmp/min.log
+          grep -q '! skipped' /tmp/min.log && { echo "::error::minifier skipped a file"; exit 1; }
+          for f in public/game-engine/min/*.js; do
+            node --check "$f" || exit 1
+          done
+          echo "✓ minified engine parses"
+
+      # Generated art must match the masters it is derived from. If the two ever
+      # disagree, what ships is whatever somebody committed by hand — which is
+      # how a "regenerate after changing X" comment quietly stops being true.
+      - name: World-map icons match their masters
+        run: |
+          npm run build:icons
+          git diff --exit-code --stat public/worldmap/icons \
+            || { echo "::error::public/worldmap/icons is stale — run npm run build:icons"; exit 1; }
+
+      - name: In-hand weapon art matches the shop icons
+        run: |
+          npm run build:weapons
+          git diff --exit-code --stat public/sprites/lpc_source/weapon_ulpc \
+            || { echo "::error::weapon sheets are stale — a shop icon changed without npm run build:weapons"; exit 1; }
+
+      # Broken asset references are invisible to both the build and the
+      # type-checker: a renamed icon or a moved sprite folder is a 404 on one
+      # screen and nothing anywhere else.
+      - name: Every reference resolves
+        run: npm run audit
+
+      # MiniPay's listing review rejects Mini Apps over wording, and wording is
+      # invisible to every other check here — a build, a type-check and an asset
+      # audit all pass happily on a "Connect wallet" prompt or an "Add Cash"
+      # button label. Both had already shipped.
+      - name: MiniPay copy rules
+        run: npm run check:copy
+
+      # An untagged Celo transaction is unattributed FOREVER — the ERC-8021
+      # suffix cannot be backfilled. Nothing else notices: the tx succeeds
+      # either way, dataSuffix is an optional param, and the loss is only
+      # visible on a dashboard nobody checks per-PR.
+      - name: Celo attribution tags
+        run: npm run check:attribution
+
+      # A stylesheet that uses a token another (lazily-loaded) sheet declares
+      # produces no error and no visible fallback — an undefined var() resolves
+      # to nothing, which for `background` is transparent. That is how a primary
+      # button shipped as near-black text on a dark modal: in the DOM, correctly
+      # sized, clickable, unreadable.
+      - name: Stylesheets declare the tokens they use
+        run: npm run check:cssvars
+
+      - name: TypeScript
+        run: npx tsc --noEmit

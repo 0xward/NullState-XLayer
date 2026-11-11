@@ -1,0 +1,198 @@
+/* signin.css — the save-your-progress screen.
+   ─────────────────────────────────────────────────────────────────────────────
+   Its own stylesheet for the same reason settings.css is: styles/game.css is
+   imported by app/game/layout.tsx and therefore blocks the world map's first
+   paint, and this screen is not on that path. Nobody reaches it without first
+   starting a run, and most players — everyone inside MiniPay, everyone who
+   already has a wallet, everyone who has skipped once — never reach it at all.
+
+   Imported by components/game/SignInScreen.tsx, so Next emits it as that
+   component's own chunk and fetches it the first time the screen renders.
+
+   ── Why it looks like this ───────────────────────────────────────────────────
+   The first version was a plain centred column of outlined buttons. It worked
+   and it read as a web form that had wandered into a game — flat, thin, no
+   marks on the buttons, nothing tying it to the screen either side of it. What
+   fixes that is not decoration but borrowing the game's own devices: the
+   bracket frame the world map uses to mark a selected bunker, the plate's dark
+   navy fill under a neon rim, and the bevelled clip-path every other button in
+   NullState already has. */
+
+.ns-signin-root{
+  position:fixed; inset:0; z-index:50;
+  display:flex; align-items:center; justify-content:center;
+  padding:24px; background:rgba(0,0,0,.95);
+  overflow-y:auto;
+}
+
+/* The same green/blue bloom the SET USERNAME screen sits in, so moving between
+   the two does not feel like changing rooms. */
+.ns-signin-orb{
+  position:absolute; top:50%; left:50%; width:600px; height:600px;
+  transform:translate(-50%,-50%); border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(0,255,136,.10) 0%, rgba(0,170,255,.03) 40%, transparent 70%);
+}
+
+.ns-signin-panel{
+  position:relative; z-index:1; width:100%; max-width:400px;
+  padding:30px 24px 24px; text-align:center;
+  background:linear-gradient(180deg, rgba(10,22,17,.92), rgba(4,10,8,.92));
+  border:1px solid rgba(0,255,136,.18);
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+}
+
+/* Four corner brackets, built the same way .ns-hub-pick builds its: eight
+   gradient bars rather than clip-path pseudo-elements, which is the version
+   that survived on the map. */
+.ns-signin-frame{
+  position:absolute; inset:7px; pointer-events:none;
+  background:
+    linear-gradient(#39ff9a,#39ff9a) 0    0    / 18px 1px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    0    / 1px  18px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 0    / 18px 1px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 0    / 1px  18px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    100% / 18px 1px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    100% / 1px  18px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 100% / 18px 1px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 100% / 1px  18px no-repeat;
+  opacity:.55;
+}
+
+.ns-signin-kicker{
+  font-family:var(--font-mono),monospace; font-size:10px; letter-spacing:5px;
+  text-transform:uppercase; color:var(--null-green); margin-bottom:14px;
+}
+.ns-signin-title{
+  font-family:var(--font-display),monospace; font-weight:900; font-size:32px;
+  line-height:1.05; color:var(--null-white); margin:0 0 10px;
+}
+.ns-signin-lede{
+  font-size:13px; line-height:1.6; color:var(--null-muted); margin:0 0 22px;
+}
+.ns-signin-em{ color:var(--null-green); word-break:break-all }
+
+.ns-signin-stack{ display:flex; flex-direction:column; gap:10px }
+
+/* ── Buttons ────────────────────────────────────────────────────────────────
+   Icon in a fixed-width slot on the left with the label centred in what is
+   left, so the three labels line up with each other instead of each sitting
+   wherever its own icon pushed it. 48px min height: these are the primary tap
+   targets on a phone. */
+.ns-signin-btn{
+  position:relative; display:flex; align-items:center; gap:10px;
+  width:100%; min-height:48px; padding:12px 16px;
+  font-family:var(--font-mono),monospace; font-size:13px; letter-spacing:.6px;
+  color:#e2efe9; background:rgba(0,255,136,.06);
+  border:1px solid rgba(0,255,136,.28);
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  transition:background .18s ease,border-color .18s ease;
+}
+.ns-signin-btn > span:last-child{ flex:1; text-align:center }
+.ns-signin-btn:hover:not(:disabled){ background:rgba(0,255,136,.13); border-color:rgba(0,255,136,.55) }
+.ns-signin-btn:active:not(:disabled){ transform:translateY(1px) }
+.ns-signin-btn:disabled{ opacity:.5; cursor:not-allowed }
+
+.ns-signin-ico{
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px; flex:0 0 26px;
+}
+
+/* Google's own button is white with the four-colour mark — that is the form
+   people recognise, and recolouring the mark to fit a palette is off-guideline.
+   It also happens to make the recommended option the brightest thing on a very
+   dark screen, which is what we wanted anyway. */
+.ns-signin-btn.is-google{
+  color:#1f1f1f; background:#fff; border-color:#fff; font-weight:700;
+}
+.ns-signin-btn.is-google:hover:not(:disabled){ background:#f1f3f4; border-color:#f1f3f4 }
+
+.ns-signin-btn.is-send{
+  color:var(--null-bg); background:var(--null-green); border-color:var(--null-green); font-weight:700;
+}
+.ns-signin-btn.is-send:hover:not(:disabled){ background:var(--null-acid); border-color:var(--null-acid) }
+
+.ns-signin-input{
+  width:100%; min-height:48px; padding:12px 16px;
+  font-family:var(--font-mono),monospace; font-size:13px;
+  color:var(--null-green); background:rgba(0,255,136,.05);
+  border:1px solid rgba(0,255,136,.3);
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+}
+.ns-signin-input:focus{ outline:none; border-color:var(--null-green) }
+.ns-signin-input::placeholder{ color:var(--null-muted) }
+
+.ns-signin-error{
+  margin-top:14px; padding:10px 12px;
+  font-family:var(--font-mono),monospace; font-size:11px; line-height:1.5;
+  color:var(--null-red); background:rgba(255,59,48,.16); border:1px solid rgba(255,59,48,.45);
+}
+
+/* Skip is a plain underlined control, not a bordered button: it has to be
+   unmissable without competing with the thing being recommended. It is
+   deliberately NOT dimmed below the body text's contrast — an escape hatch
+   nobody can read is a dark pattern, and it is one MiniPay's reviewers look
+   for. Same --null-muted the lede uses, which was raised to ~5:1 in the
+   legibility pass. */
+.ns-signin-skip{
+  display:block; margin:18px auto 0; padding:8px 14px;
+  font-family:var(--font-mono),monospace; font-size:12px; letter-spacing:1.4px;
+  color:var(--null-muted); background:none; border:none;
+  text-decoration:underline; text-underline-offset:4px;
+}
+.ns-signin-skip:hover:not(:disabled){ color:#e2efe9 }
+.ns-signin-skip:disabled{ opacity:.5; cursor:not-allowed }
+
+.ns-signin-foot{
+  margin:18px 0 0; padding-top:16px;
+  border-top:1px solid rgba(0,255,136,.16);
+  font-family:var(--font-mono),monospace; font-size:10px; line-height:1.7;
+  letter-spacing:.4px; color:var(--null-muted);
+}
+
+/* Short viewports (a 360x640 MiniPay-minimum browser, or a phone with the
+   keyboard up) must not clip the skip control off the bottom. */
+@media (max-height:680px){
+  .ns-signin-panel{ padding:22px 20px 18px }
+  .ns-signin-title{ font-size:26px }
+  .ns-signin-lede{ margin-bottom:16px }
+  .ns-signin-foot{ margin-top:14px; padding-top:12px }
+}
+
+/* ─── Account block (components/game/AccountPanel.tsx) ────────────────────────
+   Lives here rather than in settings.css because both Settings surfaces render
+   it and only one of them owns that stylesheet — and because it is the same
+   concern as the screen above, reached from the same button. Deliberately
+   warm: it sits inside Settings, and Settings now follows the Shop's palette.
+   The first version hardcoded the map's greens and stood out as the one teal
+   block on a brown panel — the exact mismatch this restyle exists to remove. */
+.ns-acct-label{
+  margin:0 0 6px;
+  font-family:var(--font-mono),monospace; font-size:10px; letter-spacing:2px;
+  text-transform:uppercase; color:#9c7a4f;
+}
+.ns-acct-value{
+  margin:0; font-family:var(--font-mono),monospace; font-size:11px;
+  color:#f0dcb8; word-break:break-all;
+}
+.ns-acct-hint{
+  margin:4px 0 0; font-family:var(--font-mono),monospace; font-size:9px;
+  line-height:1.6; color:#9c7a4f;
+}
+.ns-acct-btn{
+  margin-top:10px; width:100%; min-height:38px; padding:9px 14px;
+  font-family:var(--font-mono),monospace; font-size:11px; letter-spacing:1px;
+  text-transform:uppercase; font-weight:700;
+  /* Green for the same reason .ns-cta is: the panel is brown, the action is
+     not. See the note in game.css. */
+  color:var(--null-bg); background:var(--null-green);
+  border:1px solid var(--null-green);
+  clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%);
+}
+.ns-acct-btn:hover:not(:disabled){ background:var(--null-acid); border-color:var(--null-acid) }
+.ns-acct-btn:disabled{ opacity:.5; cursor:not-allowed }
+
+/* Sign-out is not the action being recommended, so it does not look like it. */
+.ns-acct-btn.is-quiet{
+  color:#c39a5f; background:transparent; border-color:#7a4f24; font-weight:400;
+}
+.ns-acct-btn.is-quiet:hover:not(:disabled){ background:rgba(122,79,36,.25); border-color:#8a5a2b }

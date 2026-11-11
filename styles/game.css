@@ -1,0 +1,1001 @@
+/* game.css — the world map hub. This is the only stylesheet on /game's critical path.
+   ─────────────────────────────────────────────────────────────────────────────
+   Split out of styles/game.css. That file was ONE stylesheet for the whole
+   /game route, imported by the route's layout, so every byte of it blocked the
+   world map's first render — 14.8KB transferred, 12.7KB of it unused on the
+   map, 680ms of render-blocking time by PageSpeed's measure. The map does not
+   need the dungeon HUD's styles to draw a map.
+
+   Kept small on purpose: it is imported by app/game/layout.tsx and therefore
+   blocks the first paint of the map. If you are adding styles for a screen the
+   player has to tap to reach, they belong in that screen's own stylesheet, not
+   here.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ─── World-Map Hub ────────────────────────────────────────────────────────
+   The map keeps its own aspect ratio inside the viewport (a manual "cover"),
+   so node markers positioned in map-native % stay glued to the doors painted
+   into the art on every screen size. Phones are narrower than the map's 2:3,
+   so height drives the fit; the media query flips to width on wider screens. */
+.ns-hub-map{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  height:100%; aspect-ratio:1024/1536; z-index:1;
+}
+@media (min-aspect-ratio:2/3){
+  .ns-hub-map{ width:100%; height:auto; }
+}
+
+/* A node is a tap target centred on the door painted into the map. Selection
+   reads as a soft lift of that spot, not a box drawn over the art. */
+.ns-hub-node{ border-radius:8px; transition:filter .18s ease, transform .12s ease; }
+.ns-hub-node:active{ transform:translate(-50%,-50%) scale(.94); }
+
+/* SELECTED. The old treatment was a soft white glow, which disappeared against
+   the map's lit snow — players tapped a door and could not tell anything had
+   happened. Four hard corner brackets instead: they read at a glance, they do
+   not depend on the brightness underneath, and they snap in so the tap has a
+   moment. */
+.ns-hub-pick{
+  position:absolute; inset:-5px; pointer-events:none;
+  /* Four corner brackets built from eight 2px gradient bars. An earlier
+     attempt used two pseudo-elements with clip-path polygons and rendered as
+     stray lines across the map — this is longer but it is simply rectangles,
+     with nothing to get wrong. */
+  background:
+    linear-gradient(#39ff9a,#39ff9a) 0    0    / 13px 2px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    0    / 2px  13px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 0    / 13px 2px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 0    / 2px  13px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    100% / 13px 2px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 0    100% / 2px  13px no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 100% / 13px 2px  no-repeat,
+    linear-gradient(#39ff9a,#39ff9a) 100% 100% / 2px  13px no-repeat;
+  filter:drop-shadow(0 0 5px rgba(57,255,154,.95));
+  animation:nsPickIn .16s ease-out;
+}
+@keyframes nsPickIn{ from{ transform:scale(1.35); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+/* A selected node also lifts slightly out of the map. */
+.ns-hub-node.is-sel{ filter:drop-shadow(0 0 12px rgba(57,255,154,.55)); }
+
+/* LOCKED — fog actually rolls over the door. Two soft banks at different
+   speeds and sizes so the motion never looks like one pulsing blob. */
+.ns-hub-fog{
+  position:absolute; left:50%; top:52%; width:74px; height:52px;
+  transform:translate(-50%,-50%); pointer-events:none; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(214,228,224,.62), rgba(170,190,186,.34) 55%, transparent 78%);
+  filter:blur(3px);
+  animation:nsHubFogA 11s ease-in-out infinite;
+}
+.ns-hub-fog-b{
+  width:58px; height:40px; top:60%;
+  background:radial-gradient(closest-side, rgba(196,214,210,.48), transparent 72%);
+  filter:blur(4px);
+  animation:nsHubFogB 15s ease-in-out infinite;
+}
+@keyframes nsHubFogA{
+  0%,100%{ transform:translate(-62%,-50%) scale(1);    opacity:.85; }
+  50%    { transform:translate(-38%,-54%) scale(1.16); opacity:1;   }
+}
+@keyframes nsHubFogB{
+  0%,100%{ transform:translate(-38%,-50%) scale(1.08); opacity:.7; }
+  50%    { transform:translate(-64%,-46%) scale(.92);  opacity:.95; }
+}
+/* Padlock rides above the fog, seated on a dark disc so it reads as fixed to
+   the door rather than floating over it. */
+.ns-hub-lock{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:34px; height:34px; border-radius:50%; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(closest-side, rgba(4,9,7,.72), transparent 78%);
+}
+.ns-hub-lock img{
+  width:30px; height:30px; image-rendering:pixelated; opacity:.95;
+  filter:grayscale(.3) brightness(.98) drop-shadow(0 2px 3px rgba(0,0,0,.85));
+}
+
+/* CLEARED — a small stamp on the door; the place stays quiet. */
+.ns-hub-done{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:22px; height:22px; border-radius:50%; pointer-events:none;
+  font-family:"Courier New",ui-monospace,monospace; font-weight:800; font-size:13px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  color:#04140c; background:#39ff9a; opacity:.92;
+  box-shadow:0 0 9px rgba(57,255,154,.5), 0 1px 3px rgba(0,0,0,.85);
+}
+
+/* ACTIVE — the ring lies on the GROUND IN FRONT of the door. It now has its
+   own wrapper positioned at the node's MEASURED ground percentage instead of
+   living inside the 66px marker box: inside the box its offset was a fraction
+   of the box, so it drifted off the ground whenever the box changed size. */
+.ns-hub-ground{
+  position:absolute; width:0; height:0; z-index:3; pointer-events:none;
+}
+.ns-hub-ring{
+  position:absolute; left:0; top:0; width:44px; height:16px;
+  transform:translate(-50%,-50%); border-radius:50%; pointer-events:none;
+  border:2px solid rgba(57,255,154,.92);
+  box-shadow:0 0 12px rgba(57,255,154,.5), inset 0 0 8px rgba(57,255,154,.3);
+  animation:nsHubRing 2s ease-in-out infinite;
+}
+@keyframes nsHubRing{
+  0%,100%{ transform:translate(-50%,-50%) scale(1);    opacity:.95; }
+  50%    { transform:translate(-50%,-50%) scale(1.14); opacity:.55; }
+}
+.ns-hub-chev{
+  position:absolute; left:50%; top:6%; transform:translateX(-50%);
+  font-size:11px; line-height:1; color:#39ff9a; pointer-events:none;
+  text-shadow:0 0 8px rgba(57,255,154,.9), 0 1px 2px #000;
+  animation:nsHubChev 1.6s ease-in-out infinite;
+}
+@keyframes nsHubChev{
+  0%,100%{ transform:translateX(-50%) translateY(0);   opacity:1;   }
+  50%    { transform:translateX(-50%) translateY(3px); opacity:.6;  }
+}
+
+/* Player plate — octagon-cut like the rail icons, with the same navy body and
+   neon rim, so the HUD speaks one visual language. The rim is a wrapper layer
+   because clip-path crops borders. */
+.ns-hub-plate{
+  display:flex; align-items:center; gap:8px;
+  padding:7px 13px 7px 7px;
+  background:linear-gradient(180deg,#39ff9a,#14b869);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.65));
+  border:0; text-align:left; cursor:pointer;
+  /* 44px min target: it is a button now, and the plate's own height is driven
+     by two short text lines that fall just under a comfortable tap. */
+  min-height:44px;
+}
+.ns-hub-plate:active{ filter:drop-shadow(0 1px 3px rgba(0,0,0,.65)) brightness(1.12); }
+.ns-hub-plate::before{
+  content:""; position:absolute; inset:2px;
+  background:linear-gradient(180deg,#1a2b47,#101a2e);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+}
+.ns-hub-plate > *{ position:relative; z-index:1; }
+
+/* ── SEASON PASS HOLDER ──────────────────────────────────────────────────────
+   A live pass turns the plate's rim into a dim brass frame with a single bright
+   light running around it — the edge, and only the edge. The first attempt let
+   the sweep fall across the whole face of the plate, which read as a gaudy
+   flare sitting on top of the name rather than as a frame; the light has to
+   trace the outline to look like status instead of decoration.
+   Only for a pass that is CURRENT: passes are monthly, and a badge that keeps
+   glowing for last month's pass is advertising perks that already expired.
+
+   How the edge-only part works: .ns-hub-plate's own background paints the rim
+   (the interior is covered by ::before), so a layer sitting BETWEEN the two is
+   visible on the rim alone. ::after is that layer, and giving ::before z-index
+   1 puts it back on top where it belongs. The plate's clip-path crops ::after
+   to the octagon, which is why the rotating square below can be any size. */
+.ns-hub-plate.is-pass{
+  /* Brass, not gold leaf: the frame should still be there when the light is on
+     the far side, but it must not compete with the player's own name. */
+  background:linear-gradient(180deg,#d6ae57,#8a6820);
+}
+.ns-hub-plate.is-pass::before{
+  /* 3px instead of 2px — a 2px rim is too thin for the travelling light to
+     register on a phone screen. */
+  inset:3px; z-index:1;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+.ns-hub-plate.is-pass::after{
+  content:""; position:absolute; z-index:0; pointer-events:none;
+  /* A square centred on the plate, wide enough that no rotation of it can
+     uncover a corner. Only the sliver overlapping the rim is ever seen. */
+  left:50%; top:50%; width:240%; aspect-ratio:1;
+  transform:translate(-50%,-50%) rotate(0deg);
+  background:conic-gradient(from 0deg,
+    transparent          0deg,
+    rgba(255,241,190,.30) 12deg,
+    #fff6d2              24deg,
+    rgba(255,241,190,.30) 36deg,
+    transparent          50deg);
+  animation:nsPassEdge 3.4s linear infinite;
+}
+@keyframes nsPassEdge{ to{ transform:translate(-50%,-50%) rotate(360deg); } }
+.ns-hub-plate.is-pass .ns-hub-lv{ color:#f4d68d; }
+.ns-hub-plate.is-pass .ns-hub-avatar{ box-shadow:inset 0 0 0 2px rgba(228,186,96,.7); }
+
+/* The REAL player character, and now whichever look is EQUIPPED —
+   scripts/build-hero-portrait.js bakes one portrait per armour/outfit set and
+   the component sets background-image inline. Previously this drew the
+   knight_idle sprite: a leftover from an earlier design that the game itself no
+   longer puts on screen, so the avatar showed someone the player never plays
+   as. The source is 64x64; drawn into a 34px box it crops slightly to the head
+   and chest, which is what you want from an avatar anyway. */
+.ns-hub-avatar{
+  width:34px; height:34px; display:block; flex-shrink:0;
+  background-color:#0b1220;
+  background-image:url('/sprites/player/portraits/default_skin.png');
+  background-size:52px 52px;
+  background-position:-9px -6px;
+  background-repeat:no-repeat;
+  image-rendering:pixelated;
+  box-shadow:inset 0 0 0 2px rgba(57,255,154,.55);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+}
+.ns-hub-name{ display:block; font-size:11.5px; color:#fff; font-weight:700; letter-spacing:.6px; }
+.ns-hub-lv{ display:block; font-size:9px; color:#39ff9a; letter-spacing:1.4px; margin-top:3px; }
+
+/* Skeletons for the two plate labels while the profile is in flight.
+   Measured, not guessed: the plate is shrink-to-fit, so the name's width is
+   what sets the plate's width, and a skeleton narrower than the text that
+   replaces it makes the whole plate jump. At 6.5em the block matches the
+   74.9px that the default `Player_XXXX` name renders to — the length almost
+   every first load actually gets — so the common path lands with no shift.
+   A hand-picked name can still be longer or shorter; nothing can size for a
+   string that has not arrived yet.
+
+   Heights are 1em so each block fills its own line box exactly and the level
+   line underneath does not move either. The colour is the plate's own green at
+   low alpha rather than the usual grey, so it reads as part of this UI and not
+   as a broken image. prefers-reduced-motion keeps the block, drops the
+   animation.
+
+   The shimmer animates OPACITY, not background-position. The first version
+   slid a gradient with `background-position`, and PageSpeed flagged both spans
+   under "Avoid non-composited animations — Unsupported CSS Property:
+   background-position-x": that property cannot run on the compositor, so it
+   drove layout/paint work on the main thread during precisely the window this
+   change exists to protect. Opacity composites, so the pulse is free. */
+.ns-hub-name--skeleton,
+.ns-hub-lv--skeleton{
+  border-radius:2px;
+  background:rgba(57,255,154,.18);
+  animation:ns-hub-skeleton 1.2s ease-in-out infinite;
+  will-change:opacity;
+}
+.ns-hub-name--skeleton{ width:6.5em; height:1em; }
+.ns-hub-lv--skeleton{ width:4em; height:1em; margin-top:3px; }
+
+@keyframes ns-hub-skeleton{
+  0%,100%{ opacity:.45 }
+  50%    { opacity:1 }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ns-hub-name--skeleton,
+  .ns-hub-lv--skeleton{ animation:none; background:rgba(57,255,154,.16); }
+}
+
+/* Help button — same octagon cut as the rail icons. Until a first-time player
+   has opened How to Play it pulses with a label; after that it goes quiet. */
+.ns-hub-help{
+  position:relative; width:34px; height:34px; padding:0;
+  font-size:16px; font-weight:700; line-height:1; color:#39ff9a;
+  background:#14213a; border:none;
+  box-shadow:inset 0 0 0 2px rgba(57,255,154,.85), inset 2px 2px 0 rgba(255,255,255,.08);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));
+}
+/* The "read me first" pulse. It used to animate box-shadow, which PageSpeed
+   flagged as non-composited: a shadow keyframe repaints the button 60 times a
+   second for as long as the player has not opened How to Play, which on a
+   budget phone is the whole session. Same look, built from a ring that scales
+   and fades — transform and opacity only, so it runs on the compositor and the
+   button itself is never repainted. */
+.ns-hub-help.is-new::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  box-shadow:inset 0 0 0 2px rgba(57,255,154,.9), 0 0 16px rgba(57,255,154,.85);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  animation:nsHubHelp 1.7s ease-in-out infinite;
+  will-change:transform,opacity;
+}
+@keyframes nsHubHelp{
+  0%,100%{ transform:scale(1);    opacity:.35; }
+  50%    { transform:scale(1.13); opacity:1;   }
+}
+.ns-hub-help-tip{
+  position:absolute; top:38px; right:0; white-space:nowrap; pointer-events:none;
+  font-size:7.5px; letter-spacing:1px; font-weight:700;
+  color:#04140c; background:#39ff9a; padding:3px 6px; border-radius:2px;
+  box-shadow:0 2px 6px rgba(0,0,0,.7);
+  animation:nsHubHelpTip 1.7s ease-in-out infinite;
+}
+@keyframes nsHubHelpTip{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+
+@media (prefers-reduced-motion:reduce){
+  .ns-hub-fog, .ns-hub-ring, .ns-hub-chev,
+  .ns-hub-help.is-new::after, .ns-hub-help-tip{ animation:none; }
+  /* The light stops travelling and the whole rim stays lit instead — the badge
+     is status, not decoration, so it must not vanish for someone who asked for
+     less motion. */
+  .ns-hub-plate.is-pass::after{ animation:none; background:none; }
+  .ns-hub-plate.is-pass{ background:linear-gradient(180deg,#ffe9a8,#c9992c); }
+}
+
+
+/* ── MAP LIFE ────────────────────────────────────────────────────────────────
+   The map was a still picture. These three layers give it a pulse without
+   adding a single new image beyond the 16KB path extract.
+
+   1. THE PATH BREATHES. map-path.webp is the trail and the door lamps lifted
+      out of the map art by colour (scripts/build-map-path-overlay.js), so it is
+      the same pixels in the same place — it cannot fall out of register. Laid
+      over the map with `screen` so it only ever ADDS light, and its opacity
+      swings slowly between dim and bright. A second, blurred copy underneath
+      gives the glow its bloom.
+   2. EMBERS drift upward across the whole map.
+   3. The ring at the active door and the fog on locked ones already move.
+   ─────────────────────────────────────────────────────────────────────────── */
+.ns-hub-path{
+  position:absolute; inset:0; width:100%; height:100%;
+  pointer-events:none; z-index:2;
+  mix-blend-mode:screen;
+  filter:drop-shadow(0 0 4px rgba(96,255,168,.6));
+  /* The base copy breathes, and it does so DOWN LOW on purpose. The previous
+     range (.42 -> .92) looked large but was not: screened over an already
+     bright trail it drove the green channel to 208..218 out of 255 — the top of
+     the scale, where extra light has nowhere to go. Measured on the running
+     page, that is a 4% swing, which is why the owner reported the path was not
+     dimming at all. Starting dim leaves the trail somewhere to travel to. */
+  opacity:.24;
+  animation:nsPathPulse 3.6s ease-in-out infinite;
+  will-change:opacity;
+}
+@keyframes nsPathPulse{
+  0%,100%{ opacity:.08; }
+  50%    { opacity:.62; }
+}
+
+/* ── The travelling light ────────────────────────────────────────────────────
+   A plain gradient band slides down the map inside a wrapper that is MASKED BY
+   THE TRAIL, so the band is only ever painted on the trail's own pixels: light
+   running along the route rather than a bar sweeping the screen.
+
+   The mask is the thing that stays still. The previous version had it backwards
+   — it translated a masked COPY of the trail image, so the window and the image
+   moved together and the same stretch of trail (the sliver at 4-14% of the
+   image, near The Last Light) was simply slid down the map as a duplicate. It
+   changed pixels, which is why a frame diff called it working, but it was never
+   light travelling along anything.
+   ─────────────────────────────────────────────────────────────────────────── */
+.ns-hub-flow{
+  position:absolute; inset:0; z-index:2;
+  pointer-events:none; overflow:hidden;
+  mix-blend-mode:screen;
+  -webkit-mask-image:url('/worldmap/map-path.webp');
+          mask-image:url('/worldmap/map-path.webp');
+  -webkit-mask-size:100% 100%;   mask-size:100% 100%;
+  -webkit-mask-repeat:no-repeat;  mask-repeat:no-repeat;
+}
+.ns-hub-flow-band{
+  position:absolute; left:0; right:0; top:0; height:22%;
+  /* Two stacked gradients: a tight opaque core that drives the trail to white
+     as it passes, and a wide soft one so the light arrives and leaves rather
+     than switching on. Screening a ~200-green trail caps out at 255, so the
+     core has to be near-opaque to be worth anything — a translucent band spends
+     its whole budget on the first few percent. */
+  background:
+    linear-gradient(to bottom,
+      rgba(230,255,244,0)   38%,
+      rgba(240,255,248,1)   50%,
+      rgba(230,255,244,0)   62%),
+    linear-gradient(to bottom,
+      rgba(140,255,198,0)    0%,
+      rgba(168,255,210,.42) 32%,
+      rgba(196,255,226,.62) 50%,
+      rgba(168,255,210,.42) 68%,
+      rgba(140,255,198,0)  100%);
+  /* -100% puts the band fully above the map, 460% of its own 22% height puts it
+     fully below, so the light enters and leaves rather than popping. */
+  animation:nsPathFlow 5s linear infinite;
+  will-change:transform;
+}
+@keyframes nsPathFlow{
+  from{ transform:translateY(-100%); }
+  to  { transform:translateY(460%);  }
+}
+
+/* Mist rolling over the valley. Three wide soft blooms on one element, drifting
+   sideways and back on a long cycle — slow enough that it never distracts, wide
+   enough that SOMETHING is always moving even when the trail is at its dimmest.
+   Inset past the edges so the blooms never expose a hard border as they slide.
+   `screen` keeps it purely additive: it lightens haze into the scene and can
+   never grey the art down. */
+.ns-hub-mist{
+  position:absolute; inset:0; z-index:1;
+  pointer-events:none; mix-blend-mode:screen;
+}
+/* TWO banks, drifting AGAINST each other. One bank on its own is nearly
+   invisible: a wide soft gradient sliding a few percent changes each pixel by
+   less than the eye picks up (measured: 0.7% of the map moving by 3/255 over
+   seven seconds). Two banks crossing make the overlap thicken and thin as they
+   pass, so density changes where neither layer alone would show it. */
+.ns-hub-mist::before,
+.ns-hub-mist::after{
+  content:""; position:absolute; inset:-16% -26%;
+  will-change:transform;
+}
+.ns-hub-mist::before{
+  background:
+    radial-gradient(54% 24% at 24% 26%, rgba(178,216,230,.20), transparent 70%),
+    radial-gradient(62% 27% at 46% 76%, rgba(188,222,234,.17), transparent 70%);
+  animation:nsMistA 24s ease-in-out infinite alternate;
+}
+.ns-hub-mist::after{
+  background:
+    radial-gradient(50% 21% at 70% 50%, rgba(164,208,224,.18), transparent 70%),
+    radial-gradient(44% 19% at 30% 58%, rgba(172,212,226,.15), transparent 70%);
+  animation:nsMistB 31s ease-in-out infinite alternate;
+}
+@keyframes nsMistA{
+  from{ transform:translate3d(-7%,1.5%,0) scale(1);    }
+  to  { transform:translate3d(7%,-2%,0)   scale(1.10); }
+}
+@keyframes nsMistB{
+  from{ transform:translate3d(6%,-1.5%,0) scale(1.08); }
+  to  { transform:translate3d(-6%,2%,0)   scale(1);    }
+}
+
+/* Embers. Six radial dots on one over-tall element that scrolls upward and
+   repeats — one element, one animation, no per-particle JS. They were 1.2-1.8px
+   and effectively invisible on a phone once the map is scaled up; at 2.4-3.4px
+   with a soft falloff they read as motes without becoming snow. */
+.ns-hub-motes{
+  position:absolute; left:0; right:0; top:0; height:200%;
+  pointer-events:none; z-index:3; opacity:.8;
+  background-image:
+    radial-gradient(3.0px 3.0px at 18% 12%, rgba(170,255,208,.95), transparent 100%),
+    radial-gradient(2.4px 2.4px at 72% 26%, rgba(150,245,196,.85), transparent 100%),
+    radial-gradient(3.4px 3.4px at 41% 44%, rgba(185,255,220,.9),  transparent 100%),
+    radial-gradient(2.4px 2.4px at 84% 58%, rgba(140,238,188,.8),  transparent 100%),
+    radial-gradient(2.8px 2.8px at 28% 71%, rgba(175,255,212,.92), transparent 100%),
+    radial-gradient(2.6px 2.6px at 62% 88%, rgba(160,250,200,.85), transparent 100%);
+  background-repeat:repeat-y;
+  background-size:100% 50%;
+  animation:nsMotesRise 26s linear infinite;
+}
+@keyframes nsMotesRise{
+  from{ transform:translateY(0); }
+  to  { transform:translateY(-50%); }
+}
+
+/* Rail buttons acknowledge the press. */
+.ns-hub-rail{ transition:transform .1s ease, filter .15s ease; }
+.ns-hub-rail:active{ transform:scale(.9); filter:brightness(1.3) drop-shadow(0 3px 5px rgba(0,0,0,.7)); }
+
+@media (prefers-reduced-motion:reduce){
+  /* What goes and what stays. Budget Android in NullState's markets ships with
+     "remove animations" on by default under battery saver, so this branch is
+     not a rare accessibility edge — it is what a large slice of players get. A
+     blanket `animation:none` leaves them a photograph.
+     The vestibular problem is fast or large TRANSLATION, so that is what is
+     dropped: the travelling light and the rising embers. Brightness that fades
+     over three and a half seconds and haze that takes half a minute to cross
+     the valley are not that, and they are the difference between a map that is
+     quiet and a map that is dead. */
+  .ns-hub-flow{ display:none; }
+  .ns-hub-motes{ animation:none; }
+  /* The path breathes more gently and never goes fully dark — it is wayfinding,
+     not decoration, so it must stay readable at every point in the cycle. */
+  .ns-hub-path{ animation-duration:6s; opacity:.42; }
+  @keyframes nsPathPulse{
+    0%,100%{ opacity:.30; }
+    50%    { opacity:.58; }
+  }
+  .ns-hub-pick{ animation:none; }
+  .ns-hub-node:active, .ns-hub-rail:active{ transform:none; }
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   CONFIRM POPUP — Exit-with-save, and New Game over an existing save.
+   Lives with the HUB, not the dungeon, because NewGameConfirmModal is
+   rendered by GameFlowManager itself: it is reachable straight off the world
+   map, before any dungeon stylesheet has been fetched. It was in the dungeon
+   sheet for one release of the CSS split and the dialog came up unstyled.
+   ════════════════════════════════════════════════════════════════════════ */
+/* The palette tokens this file's rules depend on.
+   ─────────────────────────────────────────────────────────────────────────────
+   These are ALSO declared on .ns-game-root in dungeon.css, and that used to be
+   their only home. That was fine while one stylesheet covered the whole /game
+   route — but the CSS split (#151) moved the dungeon's sheet behind a dynamic
+   import, and the rules that consume these tokens stayed here.
+
+   The result was invisible: .ns-confirm-btn.primary resolved background to
+   var(--green) with --green undefined, which falls back to transparent, on top
+   of near-black text. The New Game dialog's primary button was there, sized,
+   clickable and unreadable — dark text on a dark modal — for anyone who had not
+   already been inside the dungeon that session.
+
+   Declared on :root rather than a wrapper because the confirm dialogs are
+   rendered by GameFlowManager, outside .ns-game-root, and this file is only
+   loaded on /game — so it cannot leak into the landing page.
+
+   If you add a token here, add it to dungeon.css too, or the reverse of this
+   bug appears the moment a rule moves the other way. */
+:root{
+  --green:#00ff88; --green-dim:#0a3;
+  --amber:#ffb347; --red:#ff3b5c; --blue:#4ad7ff;
+}
+
+.ns-confirm-overlay{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(4,8,12,.88),rgba(2,4,6,.97));
+  backdrop-filter:blur(3px);padding:24px;}
+.ns-confirm-box{max-width:380px;width:100%;background:rgba(8,14,18,.92);border:1px solid rgba(0,255,136,.25);
+  border-radius:12px;padding:26px 24px;text-align:center;animation:ns-fadeUp .25s ease;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);}
+.ns-confirm-title{font-family:var(--font-cinzel),serif;font-size:22px;color:#eafff5;letter-spacing:2px;margin-bottom:10px;}
+.ns-confirm-text{font-family:var(--font-mono),monospace;font-size:12.5px;line-height:1.6;color:#9fc3b4;margin-bottom:20px;}
+.ns-confirm-btns{display:flex;flex-direction:column;gap:9px;}
+.ns-confirm-btn{font-family:var(--font-mono),monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  padding:11px 16px;border-radius:8px;cursor:pointer;border:1px solid rgba(0,255,136,.35);
+  background:rgba(0,255,136,.05);color:#cfeede;transition:.15s;}
+.ns-confirm-btn:hover{border-color:var(--green);background:rgba(0,255,136,.12);color:#eafff5;}
+.ns-confirm-btn.primary{background:var(--green);color:#02120a;border-color:var(--green);font-weight:700;}
+.ns-confirm-btn.primary:hover{background:#5cffb0;box-shadow:0 0 24px rgba(0,255,136,.4);}
+.ns-confirm-btn.ghost{background:transparent;border-color:rgba(255,255,255,.15);color:#7d9c8f;}
+.ns-confirm-btn.ghost:hover{border-color:rgba(255,255,255,.3);color:#cfeede;background:transparent;}
+.ns-confirm-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ─── .ns-cta — the button you are actually meant to press ──────────────────
+   Owner: "tulisan Mint $3 di pass season ukurannya terlalu kecil dan tipis,
+   juga Claim daily nya kaya kurang menonjol, buat lebih game lagi".
+
+   Both were the same shape: 10px type, 1px letter-spacing, a half-transparent
+   1px outline and no fill. That styling is correct for a secondary action and
+   wrong for the two most important buttons on the screen — one of them takes
+   real money. An outline reads as "you may do this if you like"; a game's
+   primary action should read as a thing that wants pressing.
+
+   So it is a filled slab now: solid green, dark type, an inset highlight along
+   the top-left and a shadow under it, which is the same treatment the landing
+   page's PLAY button uses. The two screens agree, and the eye lands on the
+   right control without being told to.
+
+   44px minimum height, not negotiable — this is a phone game played
+   one-handed, and it is the same floor the landing buttons hold.
+
+   Three states, deliberately distinguished. A CLAIMED button is not a
+   DISABLED button: one means you already got it, the other means you cannot.
+   Making them look identical (which they did) tells the player the game is
+   broken rather than that they are done for the day. */
+.ns-cta{
+  width:100%; min-height:44px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-family:var(--font-mono),monospace; font-weight:700;
+  font-size:13px; letter-spacing:1.6px; text-transform:uppercase;
+  padding:11px 14px; border:2px solid #0a3d24; cursor:pointer;
+  /* GREEN, and it stays green. #194 made this gold to match the Shop's panel
+     and that was the wrong read of the brief — owner: "cokelat hanya vibes
+     warna belakang saja, jgn sampe tombol2 nya serupa warna". Brown is the
+     room; green is the thing you press, the same green as PLAY GAME on the
+     landing page. A button the colour of the panel behind it stops announcing
+     itself, which is the opposite of what .ns-cta exists for. */
+  color:#04140c; background:var(--green);
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.38), 0 0 18px rgba(0,255,136,.32);
+  clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  transition:filter .12s ease, transform .08s ease;
+}
+.ns-cta:hover{ filter:brightness(1.1); }
+/* The press has to be felt on a touchscreen, where there is no hover to tell
+   you the tap registered. */
+.ns-cta:active{ transform:translateY(1px); filter:brightness(1.18); }
+
+/* Price rides along at the end, bigger than the label. On a shop button the
+   number is the decision — burying it inside the same 10px run as the verb
+   was the actual complaint. */
+.ns-cta-price{ font-size:15px; font-weight:800; letter-spacing:1px; }
+
+/* Working. Keeps the fill so the button does not appear to vanish mid-tap. */
+.ns-cta.is-busy{ background:#0f8f5c; color:#cbffe6; box-shadow:inset 2px 2px 0 rgba(255,255,255,.15); cursor:progress; }
+
+/* Done for now — earned, not blocked. Amber, because green would read as
+   "still available" at a glance. */
+.ns-cta.is-done{
+  background:rgba(255,179,71,.14); border-color:rgba(255,179,71,.55);
+  color:var(--amber); box-shadow:none; cursor:default;
+}
+
+/* Genuinely unavailable. */
+.ns-cta:disabled:not(.is-busy):not(.is-done){
+  background:rgba(42,74,53,.35); border-color:rgba(42,74,53,.8);
+  color:#5d7a6c; box-shadow:none; cursor:not-allowed;
+}
+
+/* Secondary actions keep the old outline look, on purpose — the point of
+   filling the primary is that it stands apart from these. */
+.ns-cta.secondary{
+  background:rgba(0,255,136,.05); color:var(--green);
+  border-color:rgba(0,255,136,.5); box-shadow:none;
+  font-size:11px; font-weight:600; letter-spacing:1.2px;
+}
+.ns-cta.secondary:hover{ background:rgba(0,255,136,.12); border-color:var(--green); }
+
+@media (prefers-reduced-motion:reduce){
+  .ns-cta{ transition:none; }
+  .ns-cta:active{ transform:none; }
+}
+
+/* ─── Daily status bar (components/game/DailyStatusBar.tsx) ──────────────────
+   GAME-DESIGN.md §5.5 — the five-second answer to "why am I here today?". Sits
+   just above the ENTER button, in the path the eye already takes toward the
+   only action on the screen.
+
+   Small on purpose: this file blocks the map's first paint (see the header),
+   and the bar is three chips. Every chip hides itself when it has nothing true
+   to say, so the common case for a brand-new player is that none of this
+   renders at all. */
+.ns-hub-daily{
+  display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+  margin:0 0 8px; padding:0 2px;
+}
+.ns-hub-chip{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 9px; border-radius:999px;
+  font-family:var(--font-mono),monospace; font-size:10px; font-weight:700;
+  letter-spacing:.6px; white-space:nowrap;
+  border:1px solid rgba(0,255,136,.3); background:rgba(4,20,12,.82);
+  color:#9fe6c2; text-shadow:0 1px 2px #000;
+}
+.ns-hub-chip.is-amber{ border-color:rgba(255,179,71,.45); color:#ffcf8a; }
+/* The one state worth interrupting for: something finished and is waiting to
+   be collected. */
+.ns-hub-chip.is-ready{
+  border-color:#39ff9a; color:#04140c; background:#39ff9a;
+  text-shadow:none; box-shadow:0 0 14px rgba(57,255,154,.45);
+}
+.ns-hub-chip.is-tappable{ cursor:pointer; }
+.ns-hub-chip.is-tappable:active{ transform:translateY(1px); }
+.ns-hub-daily-ico{ font-size:11px; line-height:1; }
+
+/* The selected bunker's profile — risk, shard tier, length (GAME-DESIGN.md §7).
+   Sits under the subline in the bottom bar, so the answer to "which bunker?" is
+   on the way to the ENTER button rather than somewhere the player has to go
+   looking for it. Values come from lib/constants/bunkers.ts, which is checked
+   against the engine by npm run test:bunkers. */
+.ns-hub-profile{
+  display:flex; gap:5px; align-items:baseline; flex-wrap:wrap;
+  margin-top:2px; font-size:9px; letter-spacing:.5px; color:#8ea89d;
+}
+.ns-hub-risk{ color:#ff9f6b; letter-spacing:1px; }
+.ns-hub-tier{ color:#b46bff; font-weight:700; }
+.ns-hub-dot{ color:#3d5a4c; }
+.ns-hub-pitch{
+  display:block; margin-top:2px; font-size:9px; letter-spacing:.3px;
+  color:#5f8d78; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
+/* The login-streak reward, announced on the one visit that earned it
+   (GAME-DESIGN.md §5.3). Deliberately not a modal: it must not stand between
+   the player and the ENTER button they came for. It is a button only so it can
+   be dismissed by tapping — it goes away on its own the next time the map
+   mounts, because the grant only happens once per UTC day. */
+.ns-hub-streak-note{
+  display:block; width:100%; margin:0 2px 6px; padding:7px 10px;
+  border-radius:8px; border:1px solid rgba(255,179,71,.5);
+  background:rgba(28,16,4,.94); color:#ffcf8a;
+  font-family:var(--font-mono),monospace; font-size:11px; font-weight:700;
+  letter-spacing:.5px; text-align:left; cursor:pointer;
+  text-shadow:0 1px 2px #000;
+}
+.ns-hub-streak-note:active{ transform:translateY(1px); }
+
+/* THE DAILY PANEL (GAME-DESIGN.md §5.5).
+   Replaces the strip that used to expand above the bar. Owner, watching it in
+   use: tapping the DAILY rail button made something appear at the far end of
+   the screen from the icon pressed, and it showed only the contracts while the
+   streak, fragments and energy lived elsewhere. Every other rail button opens a
+   screen; this one now opens a panel, and the panel holds everything daily.
+
+   A centred sheet rather than a full route: it is four short sections, and a
+   route would cost a navigation each way for something read in five seconds. */
+/* ── ENDGAME (post-PROTOCOL ZERO) ─────────────────────────────────────────────
+   The Null Abyss and New Game+ used to live only on the engine's own title
+   screen, which with the world map on is reached exactly once — by finishing
+   the campaign — and cannot be left. They live on the map now. Purple because
+   in this game purple is the void: the Abyss theme, T3 shards, the vault's own
+   spark. See lib/campaignComplete.ts. */
+.ns-hub-endgame{
+  margin-top:18px; padding-top:14px;
+  border-top:1px solid rgba(180,107,255,.28);
+  display:flex; flex-direction:column; gap:7px;
+}
+.ns-hub-endgame-h{
+  margin:0 0 2px; text-align:center;
+  font-family:var(--font-mono),monospace; font-size:8.5px; font-weight:700;
+  letter-spacing:2.6px; color:#a06bd8;
+}
+.ns-hub-endgame-btn{
+  display:block; width:100%; text-align:left; cursor:pointer;
+  padding:9px 11px; min-height:44px;
+  background:linear-gradient(180deg,rgba(180,107,255,.16),rgba(180,107,255,.05));
+  box-shadow:inset 0 0 0 1px rgba(180,107,255,.5);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  font-family:var(--font-mono),monospace;
+}
+.ns-hub-endgame-btn:active{ transform:translateY(1px); filter:brightness(1.2) }
+.ns-hub-endgame-name{
+  display:block; font-size:13px; font-weight:800; letter-spacing:2.2px; color:#e6d2ff;
+  text-shadow:0 0 12px rgba(180,107,255,.55);
+}
+.ns-hub-endgame-sub{
+  display:block; margin-top:3px; font-size:9px; line-height:1.5; color:#9a8bb5; letter-spacing:.2px;
+}
+
+/* The one-time reveal, on the first visit to the map after the ending. */
+.ns-hub-reveal{
+  position:relative; overflow:hidden;
+  width:100%; max-width:340px; max-height:86dvh; overflow-y:auto;
+  padding:18px 16px 16px; text-align:center;
+  background:linear-gradient(180deg,#1a0d2c 0%,#0a0714 40%,#07050f 100%);
+  box-shadow:inset 0 0 0 2px rgba(180,107,255,.6),0 16px 46px rgba(0,0,0,.75);
+  clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+  font-family:var(--font-mono),monospace;
+}
+.ns-hub-reveal-burst{
+  position:absolute; inset:-30% -10%; pointer-events:none;
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(200,150,255,.14) 20deg,transparent 40deg,
+    rgba(200,150,255,.14) 60deg,transparent 80deg);
+  animation:nsRevealSpin 12s linear infinite;
+}
+@keyframes nsRevealSpin{ to{ transform:rotate(360deg) } }
+.ns-hub-reveal > *:not(.ns-hub-reveal-burst){ position:relative; z-index:1 }
+.ns-hub-reveal-kicker{ margin:0; font-size:8.5px; letter-spacing:3px; color:#a06bd8; font-weight:700 }
+.ns-hub-reveal-title{
+  margin:3px 0 10px; font-size:24px; font-weight:800; letter-spacing:3px; color:#efe2ff;
+  text-shadow:0 0 22px rgba(180,107,255,.7);
+}
+.ns-hub-reveal-body{ margin:0 0 9px; font-size:10.5px; line-height:1.6; color:#b4a6c8; text-align:left }
+.ns-hub-reveal-body b{ color:#e6d2ff }
+.ns-hub-reveal-foot{ margin:10px 0 0; font-size:9px; letter-spacing:.4px; color:#7d6e93 }
+.ns-hub-reveal-foot b{ color:#c3aee0 }
+.ns-hub-reveal-close{
+  margin-top:12px; width:100%; min-height:44px; cursor:pointer;
+  font-family:var(--font-mono),monospace; font-size:12px; font-weight:800; letter-spacing:2.4px;
+  color:#04140c; background:#39ff9a; border:3px solid #0a3d24;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.4),0 0 18px rgba(57,255,154,.45);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+.ns-hub-reveal-close:active{ transform:translateY(1px) }
+@media (prefers-reduced-motion:reduce){ .ns-hub-reveal-burst{ animation:none; background:none } }
+
+.ns-daily-scrim{
+  position:fixed; inset:0; z-index:60;
+  display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(2,7,5,.72); backdrop-filter:blur(2px);
+}
+/* The panel used to be a plain dark rectangle with rows of text in it, and the
+   owner's word for it was "jelek banget, kaya bukan game banget". It borrows
+   the game's own furniture now — the notched corners the map's ENTER button and
+   the rail icons are cut with, an inset bevel, and a faint scanline — so it
+   reads as part of the same object rather than a web dialog parked on top of
+   one. The clip-path is why there is no border-radius: the two cannot both
+   describe the same edge. */
+.ns-daily-panel{
+  position:relative;
+  width:100%; max-width:340px; max-height:84dvh; overflow-y:auto;
+  background:linear-gradient(180deg,#08221a 0%,#04140c 34%,#04120b 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(57,255,154,.42),
+    inset 3px 3px 0 rgba(255,255,255,.05),
+    0 14px 44px rgba(0,0,0,.72);
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  font-family:var(--font-mono),monospace; padding:13px 14px 16px;
+}
+/* Scanline. 3% opacity, and the difference between a panel and a screen. */
+.ns-daily-panel::before{
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:repeating-linear-gradient(180deg,rgba(160,255,210,.05) 0 1px,transparent 1px 3px);
+}
+.ns-daily-panel > *{ position:relative; z-index:1 }
+.ns-daily-head{
+  display:flex; align-items:baseline; gap:8px;
+  padding-bottom:9px; margin-bottom:4px;
+  border-bottom:1px solid rgba(0,255,136,.16);
+}
+.ns-daily-title{
+  font-size:13px; font-weight:800; letter-spacing:4px; color:#39ff9a;
+  text-shadow:0 0 12px rgba(57,255,154,.5);
+}
+.ns-daily-reset{ font-size:9px; letter-spacing:.5px; color:#5f8d78 }
+.ns-daily-close{
+  margin-left:auto; width:26px; height:26px; flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.14); border-radius:6px;
+  background:transparent; color:#8ea89d; font-size:12px; line-height:1; cursor:pointer;
+}
+.ns-daily-close:active{ transform:translateY(1px) }
+
+.ns-daily-sec{ margin-top:13px }
+.ns-daily-sech{
+  display:flex; align-items:center; gap:6px;
+  margin:0 0 7px; font-size:9px; letter-spacing:1.4px; text-transform:uppercase;
+  color:#5f8d78; font-weight:700;
+}
+/* The section's own headline number, pulled out of the prose and given the
+   weight it deserves: "3 DAYS", "2/3", "11/18" is what the eye is looking for
+   when it lands on a heading. */
+.ns-daily-sech-val{
+  margin-left:auto; flex:0 0 auto;
+  font-size:11px; letter-spacing:1px; color:#ffd166; font-weight:800;
+}
+.ns-daily-sech-sub{ flex:0 0 auto; font-size:8.5px; letter-spacing:.6px; color:#3f6455; text-transform:none }
+.ns-daily-row{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  width:100%; padding:3px 0; font-size:11px; color:#cfeede; text-align:left;
+}
+.ns-daily-label{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.ns-daily-val{ flex:0 0 auto; font-weight:700; color:#ffd166 }
+/* `is-done` moved onto the task WRAPPER when contracts gained progress bars —
+   the bar and the text both have to change, and they are siblings. The row
+   selector is kept alongside it because the fragment and energy sections still
+   render bare rows. */
+.ns-daily-row.is-done,
+.ns-daily-task.is-done .ns-daily-row{ color:#5f8d78 }
+.ns-daily-row.is-done .ns-daily-val,
+.ns-daily-task.is-done .ns-daily-val{ color:#39ff9a }
+.ns-daily-note{ margin:4px 0 0; font-size:9px; line-height:1.5; color:#4f7a68 }
+.ns-daily-tap{
+  border:1px solid rgba(0,255,136,.22); border-radius:7px;
+  background:rgba(0,255,136,.05); padding:6px 8px; cursor:pointer;
+}
+.ns-daily-tap:active{ transform:translateY(1px) }
+
+/* ── THE STREAK LADDER ───────────────────────────────────────────────────────
+   Seven tiles, all seven visible without scrolling on a 390px phone. The grid
+   is 7 equal columns rather than a flex row so the tiles cannot end up
+   different widths when one holds "150" and its neighbour holds "2" — an
+   uneven ladder does not read as a ladder. */
+.ns-streak-ladder{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:3px;
+  margin:0 0 8px; padding:0; list-style:none;
+}
+.ns-streak-day{
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  padding:5px 1px 4px; min-height:52px;
+  background:rgba(255,255,255,.03);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+}
+.ns-streak-daynum{ font-size:7.5px; letter-spacing:.4px; color:#4f7a68; font-weight:700 }
+.ns-streak-ico{ font-size:12px; line-height:1 }
+.ns-streak-ico.is-point{ color:#ffd166 }
+.ns-streak-ico.is-shard{ color:#b46bff }
+.ns-streak-ico.is-energy{ color:#7ef0a6 }
+.ns-streak-amt{ font-size:9.5px; font-weight:800; color:#cfeede; line-height:1 }
+
+/* Banked. Dimmed and stamped — the past is settled, and it should not compete
+   with today for attention. */
+.ns-streak-day.is-done{ background:rgba(57,255,154,.09); box-shadow:inset 0 0 0 1px rgba(57,255,154,.3) }
+.ns-streak-day.is-done .ns-streak-ico,
+.ns-streak-day.is-done .ns-streak-amt{ opacity:.4 }
+.ns-streak-tick{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:800; color:#39ff9a; opacity:.92;
+  text-shadow:0 0 10px rgba(57,255,154,.7),0 1px 2px #000;
+}
+
+/* Today. The only lit tile on the row. */
+.ns-streak-day.is-today{
+  background:linear-gradient(180deg,rgba(255,209,102,.24),rgba(255,209,102,.07));
+  box-shadow:inset 0 0 0 2px #ffd166,0 0 14px rgba(255,209,102,.35);
+  animation:nsStreakToday 2.2s ease-in-out infinite;
+}
+.ns-streak-day.is-today .ns-streak-daynum{ color:#ffd166 }
+.ns-streak-day.is-today .ns-streak-amt{ color:#fff5d8 }
+@keyframes nsStreakToday{ 0%,100%{ filter:brightness(1) } 50%{ filter:brightness(1.22) } }
+
+/* Day 7 is the destination, so it is drawn as one whether or not it is today.
+   A ladder whose top rung looks like every other rung has no top. */
+.ns-streak-day.is-jackpot{
+  background:linear-gradient(180deg,rgba(180,107,255,.2),rgba(180,107,255,.05));
+  box-shadow:inset 0 0 0 1px rgba(180,107,255,.6);
+}
+.ns-streak-day.is-jackpot .ns-streak-daynum{ color:#d2a6ff }
+.ns-streak-day.is-jackpot.is-today{
+  box-shadow:inset 0 0 0 2px #ffd166,0 0 18px rgba(255,209,102,.55);
+}
+
+/* The shield line. Green when held, muted while it is being earned. */
+.ns-streak-shield{
+  display:flex; align-items:flex-start; gap:7px; margin-top:8px;
+  padding:7px 9px;
+  background:rgba(255,255,255,.03);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+}
+.ns-streak-shield.is-ready{
+  background:rgba(57,255,154,.08); box-shadow:inset 0 0 0 1px rgba(57,255,154,.42);
+}
+.ns-streak-shield-ico{ font-size:13px; line-height:1.3; flex:0 0 auto; filter:grayscale(1); opacity:.55 }
+.ns-streak-shield.is-ready .ns-streak-shield-ico{ filter:none; opacity:1 }
+.ns-streak-shield-txt{ font-size:9px; line-height:1.55; color:#7ba393 }
+.ns-streak-shield-txt b{ color:#cfeede; font-weight:700 }
+.ns-streak-shield.is-ready .ns-streak-shield-txt b{ color:#39ff9a }
+.ns-streak-flame{ font-size:11px; line-height:1 }
+
+/* ── PROGRESS BARS ──────────────────────────────────────────────────────── */
+.ns-daily-task{ margin-bottom:7px }
+.ns-daily-task:last-child{ margin-bottom:0 }
+.ns-daily-bar{
+  display:block; height:5px; margin-top:3px;
+  background:rgba(255,255,255,.07);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);
+}
+.ns-daily-bar-fill{
+  display:block; height:100%;
+  background:linear-gradient(90deg,#1fae6a,#39ff9a);
+  box-shadow:0 0 8px rgba(57,255,154,.5);
+  transition:width .3s ease;
+}
+.ns-daily-bar-fill.is-frag{ background:linear-gradient(90deg,#7a3fd0,#b46bff); box-shadow:0 0 8px rgba(180,107,255,.5) }
+.ns-daily-task.is-done .ns-daily-bar-fill{ background:#39ff9a }
+
+/* ── "YOU JUST GOT PAID" ────────────────────────────────────────────────────
+   The banner at the top of the panel on the one visit per day that earned
+   something. Deliberately the same gold vocabulary as the vault win screen —
+   in this game, gold means real money arrived in your account. */
+.ns-daily-claim{
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  margin:10px 0 2px; padding:11px 10px 10px; text-align:center;
+  background:linear-gradient(180deg,rgba(255,209,102,.22),rgba(255,209,102,.05));
+  box-shadow:inset 0 0 0 2px rgba(255,209,102,.65);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+}
+.ns-daily-claim-burst{
+  position:absolute; inset:-40% -10%; pointer-events:none;
+  background:conic-gradient(from 0deg,transparent 0deg,rgba(255,240,190,.16) 18deg,transparent 36deg,
+    rgba(255,240,190,.16) 54deg,transparent 72deg);
+  animation:nsClaimSpin 9s linear infinite;
+}
+@keyframes nsClaimSpin{ to{ transform:rotate(360deg) } }
+.ns-daily-claim > *:not(.ns-daily-claim-burst){ position:relative; z-index:1 }
+.ns-daily-claim-day{ font-size:8.5px; letter-spacing:2.4px; color:#c9a24a; font-weight:700 }
+.ns-daily-claim-amt{
+  font-size:19px; font-weight:800; letter-spacing:.5px; color:#ffe9a8; line-height:1.15;
+  text-shadow:0 0 16px rgba(255,209,102,.6);
+}
+.ns-daily-claim-note{ font-size:8.5px; letter-spacing:.3px; color:#a58a4e }
+
+@media (prefers-reduced-motion:reduce){
+  .ns-streak-day.is-today{ animation:none; filter:brightness(1.12) }
+  .ns-daily-claim-burst{ animation:none; background:none }
+  .ns-daily-bar-fill{ transition:none }
+}
+
+
+/* ── "OUT OF ENERGY" IS THE EXIT DOOR, SO IT SAYS WHAT IS THROUGH IT ─────────
+   The one moment the game knows for certain a player is about to stop. It used
+   to say "you are done" and show a $1 button — a closing and a bill. The streak
+   ladder goes here too, with TOMORROW lit rather than today, because today is
+   already spent. Reuses .ns-streak-* wholesale: two drawings of the same ladder
+   is how the two would end up disagreeing about which day you are on. */
+.ns-exit-streak{
+  margin:2px 0 12px; padding:9px 10px 8px;
+  background:rgba(255,209,102,.07);
+  box-shadow:inset 0 0 0 1px rgba(255,209,102,.34);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  text-align:left;
+}
+.ns-exit-streak-h{
+  margin:0 0 7px; font-family:var(--font-mono),monospace;
+  font-size:9.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; color:#ffd166;
+}
+.ns-exit-streak-note{
+  margin:7px 0 0; font-family:var(--font-mono),monospace;
+  font-size:9.5px; line-height:1.5; color:#9fbdaf;
+}
+.ns-exit-streak-note b{ color:#ffe9a8 }
+
+/* ─── The gate veil ──────────────────────────────────────────────────────────
+   Set by the inline script in app/game/layout.tsx, before the first paint, and
+   only when the Privy gate is certain to appear. See the long note there for
+   why it is an attribute on <html> and not an overlay element: Next's
+   hydration reconciles the children of <body> and removed the overlay at 261ms,
+   which is 600ms before the gate could cover anything.
+
+   Hiding rather than not-rendering: the map is in the prerendered HTML and
+   cannot be un-rendered from the client. `visibility` keeps its layout and its
+   image request intact, so a player who skips the gate gets the map instantly
+   instead of paying for it twice.
+
+   Cleared by lib/privyGateFlag.ts's liftGateVeil() from two places — the gate
+   once it has painted, and the flow manager the moment it turns out the gate is
+   not coming — with the script's own 3s timer as the backstop. */
+html[data-ns-gate] { background: #000 }
+html[data-ns-gate] .ns-home-root { visibility: hidden }

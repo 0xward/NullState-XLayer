@@ -1,0 +1,1242 @@
+/* dungeon.css — the in-run UI: HUD, inventory, containers, vault, tutorial.
+   ─────────────────────────────────────────────────────────────────────────────
+   Split out of styles/game.css. That file was ONE stylesheet for the whole
+   /game route, imported by the route's layout, so every byte of it blocked the
+   world map's first render — 14.8KB transferred, 12.7KB of it unused on the
+   map, 680ms of render-blocking time by PageSpeed's measure. The map does not
+   need the dungeon HUD's styles to draw a map.
+
+   Imported by components/game/DungeonGame.tsx, which GameFlowManager loads
+   with next/dynamic — so this ships as a lazy chunk and is fetched when a run
+   actually starts, not when the map opens. Everything here is scoped under
+   .ns-game-root, which only DungeonGame renders.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════════════════════════
+   NULL_STATE :: DUNGEON GAME (canvas engine UI)
+   All selectors scoped under .ns-game-root so they never leak into the
+   landing page. Keyframes are ns-prefixed to avoid colliding with the
+   site's own fadeUp/etc. The engine lives in /public/game-engine/*.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-game-root{
+  --green:#00ff88; --green-dim:#0a3;
+  --amber:#ffb347; --red:#ff3b5c; --blue:#4ad7ff;
+  --g-bg:#05070a; --panel:rgba(8,14,18,.72); --line:rgba(0,255,136,.25);
+  position:fixed; inset:0; width:100vw; height:100vh; overflow:hidden; z-index:50;
+  background:var(--g-bg); color:#cfeede;
+  font-family:var(--font-mono),monospace; -webkit-font-smoothing:none;
+  /* Stop mobile pull-to-refresh / rubber-band overscroll and any other
+     browser-native touch gesture (pinch-zoom, pan-scroll) from hijacking
+     a swipe that was meant for the game's own joystick/attack controls. */
+  overscroll-behavior:none; touch-action:none;
+}
+/* Mobile browsers (Chrome/Safari) report 100vh as the LARGEST possible
+   viewport (address bar hidden), but on first load the address bar is
+   still visible, so 100vh overshoots the real visible area and anything
+   anchored to the bottom (the touch stick) renders underneath the browser
+   chrome and gets clipped. 100dvh tracks the actual visible viewport. */
+@supports (height: 100dvh){
+  .ns-game-root{ height:100dvh; }
+}
+/* Reset for the DOM the vanilla engine owns.
+   DO NOT add an id to this selector. It was briefly `.ns-game-root #app *`,
+   to keep it away from the React overlays that sit as siblings of #app — and
+   an id makes the selector (1,1,0), which outranks EVERY `.ns-game-root .foo`
+   padding rule in this file at (0,2,0). The reset stopped being a floor and
+   became a ceiling: the HUD bars lost their 12px inset and sat clipped
+   against the screen edge, the loot window lost its 26px and ran the full
+   width of the phone, and so on through every panel inside #app.
+   The overlays are kept out of reach by rendering them in a portal on
+   document.body instead (see SettingsModal / SaveConfirmModal in
+   DungeonGame.tsx), which is where a fixed-position modal belongs anyway. */
+.ns-game-root *{box-sizing:border-box;margin:0;padding:0;}
+.ns-game-root #app{position:relative;width:100%;height:100%;overflow:hidden;}
+.ns-game-root canvas#game{position:absolute;inset:0;width:100%;height:100%;display:block;
+  image-rendering:pixelated;image-rendering:crisp-edges;background:#04060a;}
+.ns-game-root .hidden{display:none !important;}
+
+/* back / exit link */
+.ns-game-root .ns-back{position:absolute;top:10px;left:14px;z-index:30;pointer-events:auto;
+  font-family:var(--font-mono),monospace;font-size:11px;letter-spacing:3px;text-decoration:none;
+  color:var(--green);border:1px solid var(--line);border-radius:6px;padding:6px 12px;
+  background:rgba(0,0,0,.45);transition:.2s;cursor:pointer;}
+.ns-game-root .ns-back:hover{background:rgba(0,255,136,.12);color:#eafff5;}
+/* #4 (v40) — on portrait/mobile the EXIT button's real footprint (14px
+   left offset + ~80px button width, from font-size 11px + 3px
+   letter-spacing + 12px horizontal padding) was wider than the 70px
+   left padding .hud-top reserved for it in the portrait media query
+   below, so the HP/XP row rendered partly underneath the button. Shrink
+   the button a bit here; the portrait .hud-top rule further down bumps
+   its reserved padding-left to match. */
+@media (orientation:portrait){
+  .ns-game-root .ns-back{top:8px;left:10px;font-size:10px;letter-spacing:2px;padding:5px 9px;}
+}
+
+/* #7 — TOKEN NULLSTATE balance readout. Positioned below the HUD's HP/XP
+   bars rather than a fixed pixel offset, since hud-top's real height
+   changes across breakpoints (it goes from a single row on desktop to a
+   taller stacked column in portrait) — a fixed top:56px cleared the EXIT
+   button but sat directly on top of the HP/XP/LV row on narrower screens. */
+/* v81: position now lives inline in TokenBalanceWidget.tsx (compact "POINT"
+   chip under the EXIT button) — these rules only kept the old wide box in
+   place and are intentionally no longer needed. */
+@media (orientation:portrait){
+}
+
+/* ---------- HUD ---------- */
+.ns-game-root #hud{position:absolute;inset:0;pointer-events:none;z-index:5;}
+/* HUD redesign (owner): the top-left EXIT button is gone, so the bars no longer
+   need the 78px left reservation — they sit flush in the corner. Only the bars
+   live in hud-top now (the LV/FLOOR/KILLS column was removed), so it's a plain
+   left-aligned block, and the bar length is cropped via a capped hud-left. */
+.ns-game-root .hud-top{position:absolute;top:0;left:0;right:0;display:flex;justify-content:flex-start;
+  align-items:flex-start;padding:8px 12px 6px 12px;gap:14px;
+  background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent);}
+.ns-game-root .hud-left{display:flex;flex-direction:column;gap:5px;min-width:0;width:min(56vw,240px);}
+.ns-game-root .bar-row{display:flex;align-items:center;gap:8px;}
+/* v80 pixel-RPG HUD skin (owner: "vibes game pixel", no more stiff flat
+   boxes). Bars become chunky notched-corner plates in the wood/gold family
+   (matching the LPC dungeon art): a stepped clip-path fakes the classic
+   8-bit rounded-pixel corner, an inset bevel gives the frame depth, and
+   the fill gets scanline segments so it reads as a retro meter. */
+.ns-game-root .bar-label{font-size:10px;letter-spacing:1.5px;color:#ffd166;width:18px;
+  text-shadow:0 1px 0 #000, 0 0 6px rgba(255,209,102,.35);}
+/* HUD redesign: bars cropped shorter (18px -> 13px) so they read as a slim
+   top-left readout and leave the top-right clear for the raised minimap. */
+.ns-game-root .bar{position:relative;flex:1;height:13px;border:0;background:#151009;
+  border-radius:0;overflow:hidden;
+  clip-path:polygon(0 4px,4px 0,calc(100% - 4px) 0,100% 4px,100% calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,0 calc(100% - 4px));
+  box-shadow:inset 0 0 0 2px #4a3520, inset 0 2px 0 2px rgba(255,255,255,.05), inset 0 -3px 0 2px rgba(0,0,0,.55);}
+.ns-game-root .bar-fill{position:absolute;inset:3px;width:calc(100% - 6px);transform-origin:left;
+  transition:width .25s ease, background .3s ease;
+  clip-path:polygon(0 2px,2px 0,calc(100% - 2px) 0,100% 2px,100% calc(100% - 2px),calc(100% - 2px) 100%,2px 100%,0 calc(100% - 2px));}
+/* retro meter texture: vertical segment ticks + a bright top scanline */
+.ns-game-root .bar-fill::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.28) 0 3px, transparent 3px calc(100% - 3px), rgba(0,0,0,.3) calc(100% - 3px) 100%),
+    repeating-linear-gradient(90deg, transparent 0 7px, rgba(0,0,0,.22) 7px 9px);}
+/* #12 — HP bar now tiers by remaining % (set on the .bar.hp parent from
+   game.js's updateHUD()/updateInventoryPanel(), not hardcoded): green
+   above 50%, amber 20–50%, red at/below 20%. Falls back to the red tier
+   if JS hasn't tagged a tier yet (e.g. very first paint). */
+.ns-game-root .bar.hp .bar-fill{background:linear-gradient(90deg,#ff2d4f,#ff7b54);}
+.ns-game-root .bar.hp.tier-high .bar-fill{background:linear-gradient(90deg,#0a6,#00ff88);}
+.ns-game-root .bar.hp.tier-mid .bar-fill{background:linear-gradient(90deg,#c98a00,#ffd54f);}
+.ns-game-root .bar.hp.tier-low .bar-fill{background:linear-gradient(90deg,#ff2d4f,#ff7b54);}
+/* XP bar is BLUE so it reads as clearly different from the green HP bar
+   (owner: "bar xp itu warna biru"). */
+.ns-game-root .bar.xp .bar-fill{background:linear-gradient(90deg,#1e5fd0,#4ad7ff);}
+
+/* #12 — low-HP vignette. Opacity is set inline from game.js (proportional
+   to how far HP has dropped below the 20% tier threshold), this class
+   only defines the look + transition. Never intercepts taps/clicks. */
+.ns-game-root .hp-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;
+  transition:opacity .3s ease;
+  background:radial-gradient(ellipse at center, transparent 45%, rgba(255,10,40,.65) 100%);}
+.ns-game-root .bar-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:9px;letter-spacing:.5px;text-shadow:0 1px 2px #000;color:#fff;}
+
+/* HUD redesign (owner): compact single-line stat readout under the bars —
+   "Point · Level · Floor · Kills" — replacing both the standalone POINT pill
+   and the oversized top-right LV/FLOOR/KILLS plates. Rendered by React
+   <HudStatLine> (sibling of #app). Small, quiet, and left-aligned so it tucks
+   right beneath the XP bar without crowding the playfield. */
+.ns-game-root .ns-hud-statwrap{position:absolute;top:50px;left:12px;z-index:8;pointer-events:none;
+  display:flex;flex-direction:column;align-items:flex-start;gap:5px;max-width:min(72vw,320px);}
+.ns-game-root .ns-hud-statline{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;
+  font-family:var(--font-mono),monospace;font-size:10px;line-height:1.2;
+  padding:3px 9px;border-radius:6px;border:1px solid rgba(0,255,136,.18);
+  background:rgba(6,10,13,.78);}
+.ns-game-root .ns-hud-stat{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.ns-game-root .ns-hud-stat .k{color:#7fd6a6;letter-spacing:.5px;}
+.ns-game-root .ns-hud-stat .v{color:#eafff5;font-weight:700;}
+/* Point pill — gold "tag" (matches the How-To-Play token pills), sits just
+   under Level so the currency reads as special, not just another stat. Same
+   font size as the stat line. */
+.ns-game-root .ns-hud-point{display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--font-mono),monospace;font-size:10px;line-height:1.2;
+  padding:3px 9px;border-radius:6px;
+  border:1px solid rgba(255,190,11,.5);background:rgba(255,190,11,.12);}
+.ns-game-root .ns-hud-point .k{color:#f2cd82;letter-spacing:.5px;text-transform:uppercase;font-weight:700;}
+.ns-game-root .ns-hud-point .v{color:#ffe9b0;font-weight:700;}
+
+/* Right-hand control cluster (inventory / settings / elixir / mute) fades to
+   near-transparent WHILE the player is moving so it never blocks the view, and
+   returns to full opacity the instant the character stops. Toggled via
+   .ns-controls-dim on the game root from game.js update(). The buttons keep
+   their own .15s transition, so opacity eases both ways; pointer-events stay on
+   so a faded button is still tappable. */
+.ns-game-root.ns-controls-dim .inv-btn,
+.ns-game-root.ns-controls-dim .ns-settings-trigger,
+.ns-game-root.ns-controls-dim .ns-elixir-trigger,
+.ns-game-root.ns-controls-dim .ns-mute-trigger{opacity:.2;}
+
+.ns-game-root .hud-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+/* v80: LV/FLOOR/KILLS become little pixel plates instead of floating text */
+.ns-game-root .stat{display:flex;flex-direction:column;align-items:center;line-height:1.1;
+  background:rgba(16,12,8,.78);padding:4px 9px 3px;min-width:44px;
+  clip-path:polygon(0 3px,3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px));
+  box-shadow:inset 0 0 0 2px #4a3520, inset 0 2px 0 2px rgba(255,255,255,.04);}
+.ns-game-root .stat-k{font-size:9px;letter-spacing:2px;color:#c9a86a;}
+.ns-game-root .stat-v{font-size:15px;color:#ffeccc;text-shadow:0 1px 0 #000, 0 0 6px rgba(255,209,102,.3);}
+.ns-game-root #muteBtn{pointer-events:auto;cursor:pointer;background:rgba(0,0,0,.4);color:var(--green);
+  border:1px solid var(--line);border-radius:6px;width:30px;height:30px;font-size:15px;}
+.ns-game-root #muteBtn.off{color:#557;}
+
+.ns-game-root .floor-banner{position:absolute;top:30%;left:50%;transform:translateX(-50%);
+  text-align:center;font-family:var(--font-cinzel),serif;font-size:clamp(20px,5vw,40px);letter-spacing:6px;
+  color:#eafff5;text-shadow:0 0 24px rgba(0,255,136,.6);opacity:0;pointer-events:none;
+  transition:opacity .6s ease;white-space:nowrap;}
+.ns-game-root .floor-banner .sub{display:block;font-family:var(--font-mono);font-size:13px;letter-spacing:4px;
+  color:var(--green);margin-top:6px;}
+.ns-game-root .floor-banner.show{opacity:1;}
+
+/* Small warning toast for stack-cap overflow on Take/Take All (punch list
+   #1 follow-up, v39b) — deliberately NOT styled like .floor-banner (that's
+   a big celebratory "FLOOR SECURED"-type banner). This is a compact,
+   plain-English warning card: title + one line of guidance, fades in and
+   back out on its own, doesn't block input (pointer-events:none), and
+   re-triggers (resets its fade timer) every time Take/Take All hits a
+   full stack, same pattern as showBanner()'s timeout handling. Positioned
+   in the same 26-30%-from-top zone as .floor-banner (a spot already
+   proven clear of the HUD on both desktop and the mobile hud-top wrap),
+   but kept small instead of using that full-width centered treatment.*/
+.ns-game-root .stash-full-warning{position:absolute;top:26%;left:50%;transform:translateX(-50%) translateY(-6px);
+  max-width:min(320px,82vw);text-align:center;font-family:var(--font-mono),monospace;
+  background:rgba(24,9,9,.88);border:1px solid rgba(255,110,110,.55);border-radius:6px;
+  padding:9px 16px;opacity:0;pointer-events:none;transition:opacity .5s ease,transform .5s ease;z-index:15;}
+.ns-game-root .stash-full-warning .warn-title{display:block;font-size:12px;letter-spacing:2px;
+  color:#ff8f8f;font-weight:700;text-transform:uppercase;}
+.ns-game-root .stash-full-warning .warn-sub{display:block;font-size:11px;letter-spacing:.3px;
+  color:#ffdede;margin-top:4px;line-height:1.35;}
+.ns-game-root .stash-full-warning.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media (max-width:520px){ .ns-game-root .stash-full-warning{top:20%;} }
+
+/* #6 (v41) — laporan asli user: log/kill-feed harus persis DI ATAS analog
+   stick, bukan angka px tetap. Stick sekarang di bottom:calc(42px+safe)
+   dan tinggi 92px, jadi tepi atasnya ada di calc(134px+safe) — log
+   nempel ~10px di atas situ, pakai formula safe-area yang sama biar tetap
+   bener di HP mana pun (device dengan gesture-bar/notch beda-beda tinggi
+   safe-area-nya, angka px tetap lama gak ngikutin itu makanya kadang
+   nutupin/numpuk). left digeser ke 34px biar sejajar sama stick yang juga
+   udah geser. Cuma boleh nampilin SATU baris (lihat log() di game.js —
+   dulu nge-stack sampai 5 baris ke atas, sekarang selalu ganti satu
+   baris), makanya flex-direction:column & gap gak lagi krusial tapi
+   dibiarin aman kalau ada transisi 2 baris sesaat.*/
+.ns-game-root .log{position:absolute;left:34px;
+  bottom:calc(134px + env(safe-area-inset-bottom, 0px));
+  max-width:min(300px,60vw);display:flex;
+  flex-direction:column;gap:3px;font-size:12px;}
+.ns-game-root .log .line{background:var(--panel);border-left:2px solid var(--green-dim);padding:4px 9px;
+  border-radius:0 4px 4px 0;opacity:0;transform:translateX(-8px);
+  animation:ns-logIn .35s ease forwards;backdrop-filter:blur(2px);}
+.ns-game-root .log .line.dm{border-color:var(--green);color:#d9fff0;}
+.ns-game-root .log .line.combat{border-color:var(--amber);color:#ffe2bd;}
+.ns-game-root .log .line.reward{border-color:var(--blue);color:#cdf3ff;}
+.ns-game-root .log .line.death{border-color:var(--red);color:#ffd2db;}
+@keyframes ns-logIn{to{opacity:1;transform:none;}}
+
+.ns-game-root .hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;
+  color:#4d6b5e;letter-spacing:1px;}
+
+/* ---------- touch ---------- */
+.ns-game-root .touch{position:absolute;inset:0;pointer-events:none;z-index:6;}
+/* #6 (v41) — laporan asli user: warna analog stick dipertebal + geser
+   dikit ke atas & dikit ke tengah (bukan ke tengah layar, cuma sedikit
+   dari pojok). left 18->34px dan bottom 26->42px = nudge kecil, bukan
+   re-posisi besar. Border dari 1px/opacity .28 jadi 2px/opacity .45 (nub
+   1px/.55 jadi 2px/.7) plus opacity idle container dari .28 ke .4 (aktif
+   .6 ke .75) biar kelihatan tanpa harus disentuh dulu. */
+.ns-game-root .stick{position:absolute;left:34px;
+  bottom:calc(42px + env(safe-area-inset-bottom, 0px));
+  width:92px;height:92px;border-radius:50%;
+  border:2px solid rgba(0,255,136,.45);background:rgba(0,0,0,.2);pointer-events:auto;
+  opacity:.4;transition:opacity .2s ease;touch-action:none;}
+.ns-game-root .stick.active{opacity:.75;}
+.ns-game-root .nub{position:absolute;left:26px;top:26px;width:40px;height:40px;border-radius:50%;
+  background:rgba(0,255,136,.32);border:2px solid rgba(0,255,136,.7);
+  box-shadow:0 0 12px rgba(0,255,136,.35);}
+.ns-game-root .atk{display:none;}  /* auto-attack: no manual button needed */
+
+/* ---------- overlays ---------- */
+.ns-game-root .overlay{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(4,8,12,.86),rgba(2,4,6,.97));
+  backdrop-filter:blur(3px);padding:24px;text-align:center;}
+.ns-game-root .title-inner,.ns-game-root .death-inner,.ns-game-root .story-inner{max-width:560px;width:100%;animation:ns-fadeUp .7s ease;}
+@keyframes ns-fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+.ns-game-root .logo{font-family:var(--font-cinzel),serif;font-size:clamp(38px,11vw,82px);font-weight:700;letter-spacing:10px;
+  color:#eafff5;text-shadow:0 0 30px rgba(0,255,136,.55),0 0 6px rgba(0,255,136,.9);}
+.ns-game-root .subtitle{color:var(--green);letter-spacing:7px;font-size:13px;margin-top:2px;}
+.ns-game-root .lore{color:#9fc3b4;font-size:13px;line-height:1.7;margin:22px auto;max-width:440px;white-space:pre-line;}
+.ns-game-root .char-select{display:flex;gap:18px;justify-content:center;margin:18px 0 28px;perspective:900px;}
+/* Character picker removed (Knight is the only playable character) — the
+   single remaining card is a static badge, not a clickable option. */
+.ns-game-root .char-select-single .char-btn{cursor:default;}
+.ns-game-root .char-select-single .char-btn:hover{transform:none;}
+.ns-game-root .char-btn{
+  position:relative;cursor:pointer;isolation:isolate;
+  background:
+    linear-gradient(180deg,rgba(0,255,136,.05),rgba(0,0,0,0) 40%),
+    linear-gradient(160deg,rgba(10,20,16,.9),rgba(3,7,5,.95));
+  border:1px solid rgba(0,255,136,.18);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  padding:16px 14px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;
+  color:#7d9c8f;font-family:var(--font-mono);letter-spacing:2px;font-size:11px;font-weight:700;
+  width:140px;transition:transform .22s cubic-bezier(.2,.8,.3,1),border-color .2s,color .2s,box-shadow .25s;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 6px 16px rgba(0,0,0,.35);
+}
+/* small role tag pinned to the top-left corner of each card, driven purely
+   by the existing data-char attribute — no markup/JS changes needed */
+.ns-game-root .char-btn:before{
+  content:attr(data-char);position:absolute;top:6px;left:-1px;
+  font-size:8px;letter-spacing:1.5px;color:var(--green-dim);
+  background:rgba(0,0,0,.55);padding:2px 7px 2px 8px;
+  clip-path:polygon(0 0,100% 0,calc(100% - 5px) 100%,0 100%);
+  transition:color .2s,background .2s;
+}
+.ns-game-root .char-btn:hover{transform:translateY(-5px);border-color:rgba(0,255,136,.45);color:#cfeede;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),0 10px 24px rgba(0,0,0,.45),0 0 22px rgba(0,255,136,.12);}
+.ns-game-root .char-btn.selected{
+  border-color:var(--green);color:#eafff5;transform:translateY(-3px);
+  background:
+    linear-gradient(180deg,rgba(0,255,136,.14),rgba(0,0,0,0) 45%),
+    linear-gradient(160deg,rgba(10,26,18,.92),rgba(3,7,5,.96));
+  box-shadow:inset 0 0 0 1px rgba(0,255,136,.5),0 0 0 1px rgba(0,255,136,.15),
+    0 10px 26px rgba(0,0,0,.5),0 0 30px rgba(0,255,136,.25);
+}
+.ns-game-root .char-btn.selected:before{color:#04150c;background:var(--green);box-shadow:0 0 12px rgba(0,255,136,.6);}
+/* thin animated scanline across the top edge of the selected card only —
+   reuses the same steady sweep already used for .terminal-scan elsewhere */
+.ns-game-root .char-btn.selected:after{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  animation:scanH 2.6s linear infinite;pointer-events:none;
+}
+.ns-game-root .char-prev{
+  position:relative;width:84px;height:84px;background-repeat:no-repeat;image-rendering:pixelated;
+  border-radius:6px;
+}
+/* radial glow seated behind the sprite so the preview reads as "lit" rather
+   than a flat cutout — sits behind via z-index, doesn't touch the canvas
+   drawn into .char-prev by drawPreview()/drawLPCPreview() in game.js */
+.ns-game-root .char-prev:before{
+  content:"";position:absolute;inset:-8px;z-index:-1;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,255,136,.14),transparent 70%);
+  opacity:.5;transition:opacity .2s;
+}
+.ns-game-root .char-btn:hover .char-prev:before,
+.ns-game-root .char-btn.selected .char-prev:before{opacity:1;}
+.ns-game-root .big-btn{cursor:pointer;font-family:var(--font-cinzel),serif;letter-spacing:5px;font-size:18px;font-weight:700;
+  color:#04110b;background:linear-gradient(180deg,#00ff88,#06c46a);border:none;border-radius:8px;
+  padding:14px 40px;box-shadow:0 0 24px rgba(0,255,136,.45);transition:.15s;}
+.ns-game-root .big-btn:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(0,255,136,.7);}
+.ns-game-root .big-btn:active{transform:translateY(0);}
+/* Post-completion endgame entries (NEW GAME+, and later THE ABYSS): a
+   smaller, voidstone-tinted variant so they read as secondary to DESCEND. */
+.ns-game-root .big-btn.big-btn-alt{margin-top:10px;font-size:14px;padding:11px 30px;
+  color:#e6d8ff;background:linear-gradient(180deg,#3a2a5e,#241a3a);box-shadow:0 0 20px rgba(150,90,255,.4);}
+.ns-game-root .big-btn.big-btn-alt:hover{box-shadow:0 0 30px rgba(150,90,255,.6);}
+.ns-game-root .title-foot{margin-top:24px;color:#3f5b4f;font-size:11px;letter-spacing:2px;}
+
+.ns-game-root .story-text{font-family:var(--font-cinzel),serif;font-size:clamp(16px,3.4vw,23px);line-height:1.9;color:#e7fff5;
+  text-shadow:0 0 18px rgba(0,255,136,.35);min-height:120px;}
+.ns-game-root .ghost-btn{margin-top:30px;cursor:pointer;background:transparent;border:1px solid var(--line);
+  color:var(--green);border-radius:6px;padding:9px 22px;letter-spacing:3px;font-family:var(--font-mono);
+  font-size:12px;transition:.2s;}
+.ns-game-root .ghost-btn:hover{background:rgba(0,255,136,.1);}
+
+.ns-game-root .death-title{font-family:var(--font-cinzel),serif;font-size:clamp(44px,12vw,90px);font-weight:700;letter-spacing:12px;
+  color:var(--red);text-shadow:0 0 40px rgba(255,59,92,.6);}
+.ns-game-root .death-sub{color:#c98b96;margin-top:8px;letter-spacing:2px;font-size:13px;}
+.ns-game-root .death-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:340px;margin:26px auto;}
+.ns-game-root .death-stats .ds{background:rgba(0,0,0,.4);border:1px solid rgba(255,59,92,.25);border-radius:8px;
+  padding:10px;}
+.ns-game-root .death-stats .ds b{display:block;color:#eafff5;font-size:22px;}
+.ns-game-root .death-stats .ds span{font-size:10px;letter-spacing:2px;color:#7d5c61;}
+
+/* ---------- action button (context-sensitive: NULL_STRIKE / OPEN) ----------
+   Replaces the old #ulti overlay popup. Sits bottom-right, near the (hidden)
+   auto-attack button, but offset so it never overlaps the left-side stick. */
+.ns-game-root .action-btn{position:absolute;right:22px;bottom:34px;z-index:7;pointer-events:auto;
+  min-width:118px;padding:12px 20px;border-radius:999px;cursor:pointer;
+  font-family:var(--font-mono);letter-spacing:2px;font-size:12px;font-weight:700;
+  color:#2a1500;background:linear-gradient(180deg,#ffc24d,#ff8a00);border:none;
+  box-shadow:0 0 24px rgba(255,150,0,.55);transition:.15s;
+  animation:ns-actionPulse 1.4s ease-in-out infinite;}
+.ns-game-root .action-btn:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(255,170,0,.8);}
+.ns-game-root .action-btn:active{transform:translateY(0);}
+.ns-game-root .action-btn.loading{opacity:.65;cursor:wait;animation:none;transform:none;box-shadow:none;}
+@keyframes ns-actionPulse{0%,100%{box-shadow:0 0 24px rgba(255,150,0,.55);}50%{box-shadow:0 0 36px rgba(255,170,0,.85);}}
+@media (orientation:portrait){ .ns-game-root .action-btn{right:16px;bottom:96px;} }
+
+/* Phase 4 — inline game-icons.net icons (CC BY 3.0, see ICON-CREDITS.md).
+   fill=currentColor, so each icon inherits the color of its surrounding text. */
+.ns-game-root .ns-ico{display:inline-block;width:1em;height:1em;vertical-align:-0.14em;fill:currentColor;}
+.ns-game-root .action-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+.ns-game-root .action-btn .ns-ico.action-ico{width:1.3em;height:1.3em;vertical-align:middle;}
+.ns-game-root .action-btn .ns-lbl{line-height:1;}
+.ns-game-root .log-ico{display:inline-flex;width:1.05em;height:1.05em;margin-right:6px;vertical-align:-0.16em;}
+.ns-game-root .log-ico .ns-ico{width:100%;height:100%;vertical-align:top;}
+.ns-game-root .floor-banner .banner-ico{width:0.9em;height:0.9em;vertical-align:-0.08em;margin-right:3px;}
+.ns-game-root .lift-floor-btn .lift-ico{width:1em;height:1em;vertical-align:-0.14em;margin-left:5px;}
+
+/* ---------- container window (dual-panel loot / stash) ----------
+   Canvas-putih theme, matching .ns-settings-panel (see SETTINGS MODAL
+   block below): warm off-white/parchment base, brown hairline borders,
+   dark ink text — instead of the dungeon's neon-on-black look. */
+.ns-game-root #containerWindow{background:rgba(6,8,7,.7);backdrop-filter:blur(2px);}
+.ns-game-root .container-inner{max-width:640px;width:100%;animation:ns-fadeUp .3s ease;
+  border:1px solid rgba(80,65,40,.35);border-radius:8px;padding:24px 22px;
+  color:#3a3226;font-family:var(--font-mono),monospace;
+  background-color:#e9e2d0;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(120,105,75,.10) 0%, transparent 40%),
+    radial-gradient(circle at 85% 12%, rgba(90,80,55,.08) 0%, transparent 35%),
+    radial-gradient(circle at 75% 80%, rgba(110,95,65,.10) 0%, transparent 42%),
+    radial-gradient(circle at 20% 88%, rgba(80,70,50,.08) 0%, transparent 38%),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.015) 0px, rgba(0,0,0,.015) 1px, transparent 1px, transparent 3px);
+  box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 40px rgba(80,65,40,.12);}
+.ns-game-root .container-title{font-family:var(--font-cinzel),serif;font-weight:700;font-size:clamp(18px,4vw,26px);
+  letter-spacing:2px;color:#2b2620;margin-bottom:16px;}
+.ns-game-root .container-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left;}
+/* Punch list follow-up (v39c): LOOT and YOUR INVENTORY used to be two
+   grids sitting loose under a text label with nothing but a thin
+   border-bottom between them — on portrait/mobile (where .container-panels
+   collapses to a single column, see the orientation:portrait rule below)
+   they visually ran together into one continuous block. Both panels are
+   now their own bordered/tinted card. YOUR INVENTORY (.inv-panel) always
+   keeps the same warm brown/parchment tone no matter what container is
+   open — it's always "your bag". LOOT (.loot-panel) instead gets a class
+   set at runtime by openContainerWindow() in game.js based on the
+   container's containerMaterial (props.js) — a wood cabinet reads as
+   wood-toned, an iron-bound chest reads as cool steel-toned, etc. — so
+   the two boxes never look like the same box even before you glance at
+   the text labels. */
+.ns-game-root .container-panel{border:1px solid rgba(80,65,40,.3);border-radius:9px;
+  padding:12px 12px 14px;background:rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 6px rgba(0,0,0,.05);}
+.ns-game-root .container-panel .container-panel-label{margin-bottom:8px;}
+.ns-game-root .inv-panel{border-color:rgba(90,75,50,.4);background:rgba(140,115,80,.10);}
+.ns-game-root .loot-panel.mat-wood{border-color:rgba(150,100,40,.55);
+  background:rgba(150,100,40,.16);}
+.ns-game-root .loot-panel.mat-wood .container-panel-label{color:#7a4f1c;}
+.ns-game-root .loot-panel.mat-wood_rotten{border-color:rgba(95,105,55,.55);
+  background:rgba(95,105,55,.17);}
+.ns-game-root .loot-panel.mat-wood_rotten .container-panel-label{color:#5c631f;}
+.ns-game-root .loot-panel.mat-iron{border-color:rgba(140,150,160,.6);
+  background:rgba(120,130,140,.16);}
+.ns-game-root .loot-panel.mat-iron .container-panel-label{color:#4b5560;}
+.ns-game-root .loot-panel.mat-vault{border-color:rgba(180,120,255,.55);
+  background:rgba(150,95,230,.14);}
+.ns-game-root .loot-panel.mat-vault .container-panel-label{color:#7a3fc9;}
+.ns-game-root .loot-panel.mat-default{border-color:rgba(80,65,40,.3);
+  background:rgba(255,255,255,.12);}
+.ns-game-root .container-panel-label{font-family:var(--font-mono);letter-spacing:3px;font-size:11px;
+  color:#5c4d33;font-weight:700;text-transform:uppercase;
+  border-bottom:1px solid rgba(80,65,40,.25);padding-bottom:6px;margin-bottom:10px;}
+.ns-game-root .container-items{min-height:120px;max-height:38vh;overflow-y:auto;touch-action:pan-y;
+  grid-template-columns:repeat(5,minmax(0,1fr));}
+.ns-game-root .container-btns{display:flex;gap:14px;justify-content:center;align-items:stretch;margin-top:20px;flex-wrap:wrap;}
+/* Inside the container window specifically, the "close" ghost button should
+   read as the same size/weight as "TAKE ALL" (just visually secondary via
+   outline-only styling) rather than the much smaller default .ghost-btn
+   used elsewhere (e.g. the title screen's back/cancel links). Both buttons
+   share flex-basis so they split the row evenly and never overflow the
+   modal width on small screens. */
+.ns-game-root .container-btns .big-btn,
+.ns-game-root .container-btns .ghost-btn{flex:1 1 150px;max-width:220px;margin-top:0;
+  padding:14px 20px;font-size:13px;letter-spacing:3px;border-radius:8px;text-align:center;}
+@media (max-width:420px){
+  .ns-game-root .container-btns .big-btn,
+  .ns-game-root .container-btns .ghost-btn{flex:1 1 100%;max-width:none;}
+}
+@media (orientation:portrait){
+  .ns-game-root .container-panels{grid-template-columns:1fr;}
+  .ns-game-root .container-inner{padding:20px 14px;}
+}
+
+/* ---------- weekly Vault code-submit window (Bunker 5 "THE LAST LIGHT") ----------
+   This used to copy #containerWindow's canvas-putih / parchment theme, and it
+   was the wrong borrow. A container window is a piece of furniture you loot;
+   the vault door is the one screen in the game with real money behind it, and
+   a cream card is the last thing that should read as. Worse, .ghost-btn is
+   `color:var(--green)` — neon green on #e9e2d0 is barely legible, so BOTH ways
+   out of this window ("back to the bunker", "leave without opening") were
+   effectively invisible. A player who reached the door without the Paper saw
+   an empty code box and no exit, and quitting the game looked like the only
+   move. That is the bug this block fixes; the palette below is the project's
+   own — black, dark green, neon green — with the vault's violet kept only as
+   a rim accent so the door still reads as a special container. */
+/* The keypad makes this window noticeably taller than it was, and it has to
+   survive a 360x640 phone in portrait without clipping the exits off the
+   bottom — the whole point of the fix above. `align-items:flex-start` plus
+   auto vertical margins on the card, rather than the inherited
+   `align-items:center`: a centred flex item that outgrows a scrolling
+   container has its overflowing TOP cut off and unreachable. */
+.ns-game-root #vaultWindow{background:rgba(3,6,5,.86);backdrop-filter:blur(3px);
+  align-items:flex-start;overflow-y:auto;padding:16px 12px;}
+.ns-game-root .vault-inner{max-width:380px;width:100%;margin:auto 0;animation:ns-fadeUp .3s ease;
+  border:1px solid rgba(150,95,230,.42);border-radius:8px;padding:26px 22px;
+  color:#cfeede;font-family:var(--font-mono),monospace;text-align:center;
+  background-color:#060d0a;
+  background-image:
+    radial-gradient(circle at 18% 8%, rgba(150,95,230,.16) 0%, transparent 45%),
+    radial-gradient(circle at 82% 92%, rgba(0,255,136,.10) 0%, transparent 45%),
+    linear-gradient(180deg, rgba(10,26,20,.92), rgba(4,9,7,.96));
+  box-shadow:0 24px 60px rgba(0,0,0,.7), inset 0 0 40px rgba(120,70,220,.16);}
+.ns-game-root .vault-title{font-family:var(--font-cinzel),serif;font-weight:700;font-size:clamp(17px,4vw,22px);
+  letter-spacing:2px;color:#eafff5;text-shadow:0 0 18px rgba(150,95,230,.5);margin-bottom:8px;}
+.ns-game-root .vault-sub{font-size:13px;line-height:1.5;color:#8fb3a4;margin-bottom:14px;}
+
+/* Requirements line — filled by refreshVaultRequirements() in game.js. */
+.ns-game-root .vault-req{font-size:11px;line-height:1.6;color:#8fb3a4;margin-bottom:14px;}
+.ns-game-root .vault-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+.ns-game-root .vault-chip{display:inline-block;padding:4px 10px;border-radius:999px;
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  color:#c98b96;border:1px solid rgba(255,59,92,.4);background:rgba(255,59,92,.12);}
+.ns-game-root .vault-chip.has{color:#7dffc0;border-color:rgba(0,255,136,.45);background:rgba(0,255,136,.12);}
+.ns-game-root .vault-req-hint{display:block;}
+.ns-game-root .vault-req.ok .vault-req-hint{color:#7dffc0;}
+.ns-game-root .vault-req.warn .vault-req-hint{color:#ffc98a;}
+
+.ns-game-root .vault-code-input{width:190px;max-width:100%;text-align:center;
+  font-family:var(--font-cinzel),serif;font-size:30px;font-weight:700;letter-spacing:14px;
+  padding:12px 0 12px 14px;border-radius:8px;border:1px solid rgba(0,255,136,.3);
+  background:rgba(0,255,136,.06);color:#eafff5;outline:none;
+  text-shadow:0 0 14px rgba(0,255,136,.35);cursor:default;caret-color:transparent;}
+.ns-game-root .vault-code-input::placeholder{color:#2f6a54;}
+
+/* ---- in-game numeric keypad ----
+   Replaces the phone's own keyboard. On a mid-range Android the native
+   keyboard opening over a running canvas costs a re-layout and a visible
+   stall; the field is readonly (see game.js) so it never opens at all.
+   48px min height keeps every key a comfortable tap target. */
+.ns-game-root .vault-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  max-width:250px;margin:14px auto 0;}
+.ns-game-root .vault-key{min-height:48px;cursor:pointer;border-radius:8px;
+  font-family:var(--font-cinzel),serif;font-size:20px;font-weight:700;letter-spacing:1px;
+  color:#eafff5;background:linear-gradient(180deg,rgba(0,255,136,.14),rgba(0,255,136,.05));
+  border:1px solid rgba(0,255,136,.28);transition:.12s;}
+.ns-game-root .vault-key:hover{background:rgba(0,255,136,.2);border-color:rgba(0,255,136,.55);}
+.ns-game-root .vault-key:active{transform:translateY(1px);}
+.ns-game-root .vault-key.is-alt{font-family:var(--font-mono),monospace;font-size:13px;letter-spacing:2px;
+  color:#8fb3a4;background:rgba(255,255,255,.04);border-color:rgba(0,255,136,.16);}
+.ns-game-root .vault-key.is-alt:hover{color:#eafff5;background:rgba(255,255,255,.09);}
+
+.ns-game-root .vault-msg{min-height:20px;margin-top:12px;font-size:13px;letter-spacing:.5px;}
+.ns-game-root .vault-msg.ok{color:#7dffc0;}
+.ns-game-root .vault-msg.err{color:#ff8a9c;}
+.ns-game-root .vault-btns{display:flex;gap:10px;justify-content:center;align-items:stretch;margin-top:18px;flex-wrap:wrap;}
+.ns-game-root .vault-btns .big-btn,
+.ns-game-root .vault-btns .ghost-btn{flex:1 1 130px;max-width:200px;margin-top:0;
+  padding:14px 20px;font-size:12px;letter-spacing:2px;border-radius:8px;text-align:center;}
+/* Both exits, stated plainly. The default .ghost-btn hairline is
+   rgba(0,255,136,.25) — fine on the dungeon's black, still thin here, so give
+   these a solid green edge. "Leave without opening" ends the last bunker for
+   good, so it gets the warning tint rather than looking like a second close. */
+.ns-game-root .vault-btns .ghost-btn{color:#7dffc0;border-color:rgba(0,255,136,.45);
+  background:rgba(0,255,136,.05);}
+.ns-game-root .vault-btns .ghost-btn:hover{background:rgba(0,255,136,.14);border-color:var(--green);}
+.ns-game-root .vault-btns .ghost-btn.is-danger{color:#ffb0bd;border-color:rgba(255,59,92,.45);
+  background:rgba(255,59,92,.07);}
+.ns-game-root .vault-btns .ghost-btn.is-danger:hover{background:rgba(255,59,92,.16);border-color:var(--red);}
+/* On a phone SUBMIT takes the full row, but the two exits share one — three
+   stacked full-width buttons pushed them below the fold on a 360x640, which
+   is the size the exits most need to be visible at. */
+@media (max-width:420px){
+  .ns-game-root .vault-btns{gap:8px;}
+  .ns-game-root .vault-btns .big-btn{flex:1 1 100%;max-width:none;}
+  .ns-game-root .vault-btns .ghost-btn{flex:1 1 45%;max-width:none;padding:11px 8px;
+    font-size:11px;letter-spacing:1px;line-height:1.35;}
+}
+@media (orientation:portrait){
+  .ns-game-root .vault-inner{padding:22px 16px;}
+}
+@media (max-height:700px){
+  .ns-game-root .vault-inner{padding:16px 14px;}
+  .ns-game-root .vault-title{font-size:18px;margin-bottom:6px;}
+  .ns-game-root .vault-sub{font-size:12px;margin-bottom:8px;}
+  .ns-game-root .vault-req{margin-bottom:8px;}
+  .ns-game-root .vault-code-input{font-size:24px;padding:8px 0 8px 14px;}
+  .ns-game-root .vault-pad{gap:6px;max-width:230px;margin-top:10px;}
+  .ns-game-root .vault-key{min-height:40px;font-size:17px;}
+  .ns-game-root .vault-msg{margin-top:8px;font-size:12px;}
+  .ns-game-root .vault-btns{margin-top:10px;}
+  .ns-game-root .vault-btns .big-btn{padding:11px 16px;}
+}
+
+/* ---------- burn queue highlight + value label ----------
+   Multi-select queue: tap the small corner checkbox (.inv-item-select) on
+   a stash item to add/remove it from the queue, then "BURN SELECTED"
+   burns everything queued at once. This is separate from tapping the item
+   body itself, which opens the #itemZoom overlay for an instant single-
+   item burn — the two flows share state (both write to G.burnQueue /
+   G.inventory.items) but are triggered by different hit targets so
+   neither one breaks the other. */
+/* Issue 1 fix: special loot items (Golden Key, Relic, Null Shard, Old Paper)
+   get a gold-tinted border + glow so they read as non-ordinary at a glance.
+   Applied on top of whatever rarity or theme styling already exists —
+   specificity is high enough to win over the default .inv-item rule but
+   a queued (.queued) state can still override the border for the burn UI. */
+.ns-game-root .inv-item.inv-item-special{
+  border-color:rgba(255,209,102,.55);
+  box-shadow:0 0 0 1px rgba(255,209,102,.25) inset,0 0 8px rgba(255,209,102,.18);
+  background:rgba(40,28,4,.55);}
+.ns-game-root .inv-item.inv-item-special:hover{
+  border-color:rgba(255,209,102,.85);
+  box-shadow:0 0 0 1px rgba(255,209,102,.5) inset,0 0 14px rgba(255,209,102,.3);}
+.ns-game-root .inv-item.queued{border-color:#a13a2f;box-shadow:0 0 0 1px rgba(161,58,47,.35) inset;
+  background:rgba(161,58,47,.08);}
+.ns-game-root .inv-item-value{position:absolute;bottom:3px;left:4px;font-size:8px;letter-spacing:.2px;
+  color:#6b5d45;font-family:var(--font-mono);}
+.ns-game-root .inv-item-select{position:absolute;top:3px;left:4px;width:13px;height:13px;
+  border-radius:3px;border:1px solid rgba(80,65,40,.45);background:rgba(255,255,255,.5);
+  cursor:pointer;z-index:2;transition:.12s;}
+.ns-game-root .inv-item-select:hover{border-color:#2b2620;}
+.ns-game-root .inv-item-select.checked{background:#a13a2f;border-color:#a13a2f;}
+.ns-game-root .inv-item-select.checked::after{content:'✓';position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:#e9e2d0;line-height:1;}
+
+/* ---------- burn bar (bottom of #invPanel) ---------- */
+.ns-game-root .burn-summary{margin-top:10px;padding-top:10px;border-top:1px dashed rgba(80,65,40,.3);
+  font-size:11px;letter-spacing:.5px;color:#7a6c52;text-align:center;min-height:14px;}
+.ns-game-root .burn-confirm{width:100%;margin-top:8px;padding:11px 0;font-size:12px;letter-spacing:2px;
+  border-radius:6px;background:#2b2620;color:#e9e2d0;border:1px solid #2b2620;box-shadow:none;}
+.ns-game-root .burn-confirm:hover{background:#453d30;}
+.ns-game-root .burn-confirm:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;background:#2b2620;}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ITEM ZOOM — overlay opened by tapping a slot in #invPanel or the LOOT
+   side of #containerWindow. Same canvas-putih aesthetic as the settings
+   modal / container window above, so the three read as one visual family.
+   TAKE is shown for container-loot slots, BURN for stash items — never
+   both (see openItemZoom() in game.js). Wired up in Task 2.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-game-root #itemZoom{background:rgba(6,8,7,.75);backdrop-filter:blur(2px);}
+.ns-game-root .item-zoom-inner{max-width:300px;width:100%;animation:ns-fadeUp .2s ease;
+  text-align:center;border-radius:8px;padding:26px 22px 22px;
+  color:#3a3226;font-family:var(--font-mono),monospace;
+  border:1px solid rgba(80,65,40,.35);
+  background-color:#e9e2d0;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(120,105,75,.10) 0%, transparent 40%),
+    radial-gradient(circle at 85% 12%, rgba(90,80,55,.08) 0%, transparent 35%),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.015) 0px, rgba(0,0,0,.015) 1px, transparent 1px, transparent 3px);
+  box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 40px rgba(80,65,40,.12);}
+.ns-game-root .item-zoom-icon-wrap{position:relative;width:88px;margin:0 auto 14px;
+  transition:width .15s,height .15s;}
+.ns-game-root .item-zoom-icon{width:100%;height:88px;image-rendering:pixelated;display:block;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+.ns-game-root .item-zoom-name{font-size:14px;letter-spacing:1.5px;text-transform:uppercase;
+  font-weight:700;color:#2b2620;margin-bottom:2px;}
+.ns-game-root .item-zoom-qty{font-size:11px;color:#7a6c52;margin-bottom:4px;}
+.ns-game-root .item-zoom-value{font-size:11px;color:#6b5d45;margin-bottom:18px;}
+/* Default (non-Paper) look — unused today since only 'paper-code' mode ever
+   un-hides #itemZoomCode, kept as a safe fallback in case another mode
+   reuses this element later. */
+.ns-game-root .item-zoom-code{font-family:var(--font-mono),monospace;font-size:34px;font-weight:700;
+  letter-spacing:10px;color:#7a5a2f;text-shadow:0 1px 0 rgba(255,255,255,.15);margin:6px 0 16px;
+  padding:10px 6px;border:1px dashed rgba(80,65,40,.4);border-radius:6px;background:rgba(0,0,0,.04);}
+.ns-game-root .item-zoom-code.hidden{display:none;}
+/* Paper mode: icon wrap grows to give the scroll art room, and the code
+   sits overlaid directly on the parchment texture — like ink written on the
+   paper — instead of as a separate boxed block underneath. Slight rotation
+   + serif-ish spacing sells the "handwritten on a found scrap" feel. */
+.ns-game-root .item-zoom-icon-wrap.paper-code{width:132px;height:132px;}
+.ns-game-root .item-zoom-icon-wrap.paper-code .item-zoom-icon{height:132px;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.35));}
+.ns-game-root .item-zoom-icon-wrap.paper-code .item-zoom-code{position:absolute;left:50%;top:54%;
+  transform:translate(-50%,-50%) rotate(-3deg);margin:0;padding:0;border:none;background:none;
+  font-size:23px;letter-spacing:5px;color:#4a3620;text-shadow:0 1px 0 rgba(255,255,255,.25);
+  white-space:nowrap;}
+.ns-game-root .item-zoom-btns{display:flex;flex-direction:column;gap:10px;}
+.ns-game-root .item-zoom-btn{width:100%;padding:11px 16px;border-radius:6px;cursor:pointer;
+  font-family:var(--font-mono),monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  transition:.15s;border:1px solid #2b2620;}
+.ns-game-root .item-zoom-btn.take{background:#2b2620;color:#e9e2d0;}
+.ns-game-root .item-zoom-btn.take:hover{background:#453d30;}
+.ns-game-root .item-zoom-btn.burn{background:rgba(161,58,47,.1);color:#a13a2f;border-color:#a13a2f;}
+.ns-game-root .item-zoom-btn.burn:hover{background:rgba(161,58,47,.18);}
+.ns-game-root .item-zoom-btn.hidden{display:none;}
+.ns-game-root .item-zoom-close{margin-top:12px;background:transparent;border:none;cursor:pointer;
+  font-size:11px;letter-spacing:1.5px;color:#7a6c52;font-family:var(--font-mono),monospace;
+  text-transform:uppercase;padding:4px 10px;min-width:44px;min-height:44px;
+  display:inline-flex;align-items:center;justify-content:center;}
+.ns-game-root .item-zoom-close:hover{color:#2b2620;}
+
+@media (max-width:520px){
+  .ns-game-root .hud-left{min-width:0;}
+  .ns-game-root .hint{display:none;}
+}
+
+/* ---------- portrait / mobile vertical ---------- */
+@media (orientation:portrait){
+  /* HUD redesign (owner): no more 92px EXIT reservation on the left, and the
+     bars stay CROPPED (not full-width) so the top-right minimap has room. */
+  .ns-game-root .hud-top{flex-direction:column;gap:6px;padding:8px 10px 6px 10px;}
+  .ns-game-root .hud-left{width:min(62vw,220px);max-width:none;}
+  .ns-game-root #muteBtn{position:absolute;top:8px;right:10px;}
+  /* #6 (v41) — bottom sengaja TIDAK di-override di sini lagi; biarkan
+     nurun dari base rule (calc(134px + safe-area)) biar tetap nempel di
+     atas stick di semua device portrait, termasuk yang punya gesture-bar/
+     notch tinggi. left/max-width/font-size tetap disesuaikan buat layar
+     sempit. */
+  .ns-game-root .log{left:30px;max-width:70vw;font-size:11px;}
+  .ns-game-root .floor-banner{top:24%;}
+  .ns-game-root .logo{letter-spacing:6px;}
+  .ns-game-root .char-select{gap:10px;flex-wrap:wrap;}
+  .ns-game-root .char-btn{width:28vw;min-width:96px;max-width:130px;padding:14px 8px 10px;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);}
+  .ns-game-root .char-btn:before{font-size:7px;padding:2px 5px 2px 6px;}
+  .ns-game-root .hint{display:none;}
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INVENTORY — small trigger button + centered modal panel.
+   The .inv-btn trigger sits directly under the canvas-drawn minimap
+   (top-right corner; minimap is drawn at top:78px/size:108px/pad:12px from
+   the canvas itself, see MM in game.js), so its position here is
+   hand-tuned to land just below that, not derived from a shared constant
+   (the minimap is canvas-drawn, this is DOM).
+   #invPanel itself is an .overlay (same centered-modal pattern as
+   #containerWindow/#itemZoom below) rather than a small anchored corner
+   box, so opening it never gets clipped by the minimap/settings gear and
+   always has enough width for a clean, fully-visible 5-column item grid
+   (see .inv-panel-inner + .inv-items).
+   ════════════════════════════════════════════════════════════════════════ */
+/* v80 pixel skin: the inventory trigger becomes a chunky notched-corner
+   wooden button with a bevel + gold pin studs — same family as the bars,
+   stat plates and the minimap frame. Position/size untouched. */
+/* HUD redesign (owner): order top-to-bottom under the raised minimap is now
+   SETTINGS then INVENTORY then ELIXIR (settings must sit above inventory). The
+   whole cluster moved up to follow the minimap (now top:14, was 78). */
+.ns-game-root .inv-btn{position:relative;pointer-events:auto;
+  width:44px;height:44px;border-radius:0;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#8a5a34 0%,#6b4526 55%,#503018 100%);color:#ffe9c4;
+  display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(0 5px,5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px));
+  box-shadow:inset 0 0 0 2px #3d2814, inset 0 3px 0 2px rgba(255,236,196,.18), inset 0 -4px 0 2px rgba(0,0,0,.4);
+  transition:.15s;}
+.ns-game-root .inv-btn:hover{background:linear-gradient(180deg,#9c6a3e 0%,#7a5230 55%,#5c3a1e 100%);color:#fff2dc;
+  box-shadow:inset 0 0 0 2px #ffd166, inset 0 3px 0 2px rgba(255,236,196,.22), inset 0 -4px 0 2px rgba(0,0,0,.4);}
+.ns-game-root .inv-btn:active{transform:translateY(1px);
+  box-shadow:inset 0 0 0 2px #3d2814, inset 0 4px 0 2px rgba(0,0,0,.35);}
+
+.ns-game-root #invPanel.overlay{pointer-events:auto;}
+.ns-game-root .inv-panel-inner{width:min(92vw,420px);max-height:min(78vh,560px);
+  overflow-y:auto;touch-action:pan-y;pointer-events:auto;
+  border:1px solid rgba(80,65,40,.35);border-radius:8px;
+  box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 40px rgba(80,65,40,.12);
+  padding:20px 18px;animation:ns-fadeUp .25s ease;
+  color:#3a3226;font-family:var(--font-mono),monospace;
+  background-color:#e9e2d0;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(120,105,75,.10) 0%, transparent 40%),
+    radial-gradient(circle at 85% 12%, rgba(90,80,55,.08) 0%, transparent 35%),
+    radial-gradient(circle at 75% 80%, rgba(110,95,65,.10) 0%, transparent 42%),
+    radial-gradient(circle at 20% 88%, rgba(80,70,50,.08) 0%, transparent 38%),
+    repeating-linear-gradient(115deg, rgba(0,0,0,.015) 0px, rgba(0,0,0,.015) 1px, transparent 1px, transparent 3px);}
+.ns-game-root .inv-panel-head{display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--font-mono);letter-spacing:3px;font-size:12px;color:#5c4d33;font-weight:700;
+  border-bottom:1px solid rgba(80,65,40,.25);padding-bottom:8px;margin-bottom:10px;}
+.ns-game-root .inv-close{background:transparent;border:none;color:#7a6c52;cursor:pointer;
+  font-size:14px;line-height:1;padding:2px 4px;min-width:44px;min-height:44px;
+  display:inline-flex;align-items:center;justify-content:center;}
+.ns-game-root .inv-close:hover{color:#2b2620;}
+.ns-game-root .inv-vitals{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;
+  padding-bottom:10px;border-bottom:1px dashed rgba(80,65,40,.3);}
+.ns-game-root .inv-vital-row{display:flex;align-items:center;gap:8px;}
+.ns-game-root .inv-vital-row .bar{flex:1;height:14px;}
+/* grid-template-columns:repeat(5,1fr) alone leaves each track's minimum
+   width at "auto" (the item's min-content size), so a long item name or
+   the fixed-size icon can force a track — and with it the whole grid —
+   wider than the panel, spilling item cards past the visible edge instead
+   of shrinking to fit 5-across. minmax(0,1fr) removes that auto-minimum so
+   the 5 columns always divide the available width evenly on any screen. */
+.ns-game-root .inv-items{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+.ns-game-root .inv-empty{grid-column:1/-1;color:#7a6c52;font-size:11px;letter-spacing:.5px;text-align:center;padding:14px 4px;}
+.ns-game-root .inv-item{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;aspect-ratio:1/1;min-width:0;overflow:hidden;background:rgba(255,255,255,.35);
+  border:1px solid rgba(80,65,40,.25);border-radius:7px;padding:13px 2px 4px;cursor:pointer;transition:.12s;}
+.ns-game-root .inv-item:hover{background:rgba(255,255,255,.55);border-color:rgba(80,65,40,.4);}
+.ns-game-root .inv-item-icon{width:60%;height:auto;max-width:32px;image-rendering:pixelated;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.25));}
+.ns-game-root .inv-item-name{font-size:7.5px;line-height:1.15;color:#5c4d33;letter-spacing:.3px;
+  text-align:center;text-transform:uppercase;max-width:100%;overflow-wrap:anywhere;word-break:break-word;}
+/* Count badge lives in its own reserved strip above the icon (see the
+   card's padding-top above) instead of floating on top of the artwork —
+   previously it sat right at the card's top edge with almost no inset,
+   reading as glued to the item icon underneath it. */
+.ns-game-root .inv-item-count{position:absolute;top:4px;right:5px;font-size:9px;color:#e9e2d0;
+  background:#2b2620;border-radius:5px;padding:1px 5px;font-weight:700;line-height:1.4;
+  box-shadow:0 1px 2px rgba(0,0,0,.25);}
+
+/* Empty placeholder cell — pads every item grid (#invItems, #containerItems,
+   #containerPlayerItems) out to a fixed 5x5 (25-slot) layout so the grid
+   shape stays constant whether it holds 1 item or 20. Dashed + unclickable,
+   distinct from a real (populated) .inv-item. */
+.ns-game-root .inv-item-empty{background:rgba(0,0,0,.03);border-style:dashed;
+  border-color:rgba(80,65,40,.15);cursor:default;pointer-events:none;}
+.ns-game-root .inv-item-empty:hover{background:rgba(0,0,0,.03);border-color:rgba(80,65,40,.15);}
+
+/* Settings gear button — HUD redesign (owner): now sits ABOVE the inventory
+   button (first in the top-to-bottom cluster under the raised minimap), same
+   size (44x44) so the two read as one evenly-matched "menu" cluster with an
+   8px gap. Gray/steel palette vs. the inventory button's brown/leather palette
+   keeps the two visually distinct despite matching size. */
+/* v80 pixel skin: same chunky notched treatment as .inv-btn, steel palette */
+.ns-game-root .ns-settings-trigger{position:relative;pointer-events:auto;
+  width:44px;height:44px;border-radius:0;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7a7f85 0%,#565a60 55%,#3e4247 100%);color:#e8ebee;
+  display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(0 5px,5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px));
+  box-shadow:inset 0 0 0 2px #2e3134, inset 0 3px 0 2px rgba(255,255,255,.16), inset 0 -4px 0 2px rgba(0,0,0,.4);
+  transition:.15s;}
+.ns-game-root .ns-settings-trigger:hover{background:linear-gradient(180deg,#8c9197 0%,#63676d 55%,#484c52 100%);color:#fff;
+  box-shadow:inset 0 0 0 2px #cfd4d9, inset 0 3px 0 2px rgba(255,255,255,.2), inset 0 -4px 0 2px rgba(0,0,0,.4);}
+.ns-game-root .ns-settings-trigger:active{transform:translateY(1px);
+  box-shadow:inset 0 0 0 2px #2e3134, inset 0 4px 0 2px rgba(0,0,0,.35);}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LIFT — floor-select popup. Compact variant of the .overlay pattern
+   (modeled on .ulti-inner) rather than a full title-style screen.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-game-root .lift-inner{max-width:380px;width:100%;animation:ns-fadeUp .3s ease;
+  background:rgba(8,14,18,.85);border:1px solid var(--line);border-radius:12px;
+  padding:26px 22px;box-shadow:0 0 40px rgba(255,70,90,.12);}
+.ns-game-root .lift-floor-list{display:flex;flex-direction:column;gap:8px;margin:18px 0 4px;
+  max-height:46vh;overflow-y:auto;touch-action:pan-y;}
+.ns-game-root .lift-floor-btn{width:100%;padding:11px 16px;font-size:14px;letter-spacing:3px;
+  background:linear-gradient(180deg,#2a3a36,#1a2622);color:#eafff5;border:1px solid rgba(0,255,136,.3);
+  box-shadow:none;border-radius:8px;}
+.ns-game-root .lift-floor-btn:hover{transform:translateY(-1px);border-color:var(--green);box-shadow:0 0 18px rgba(0,255,136,.25);}
+.ns-game-root .lift-floor-btn.current{border-color:#ffd166;color:#ffd166;background:linear-gradient(180deg,#3a311a,#221c10);cursor:default;}
+.ns-game-root .lift-floor-btn.current:hover{transform:none;box-shadow:none;}
+.ns-game-root .lift-floor-btn.locked{opacity:.45;cursor:not-allowed;border-color:rgba(255,70,90,.35);color:#c98a92;}
+.ns-game-root .lift-floor-btn.locked:hover{transform:none;box-shadow:none;}
+.ns-game-root .lift-floor-btn:disabled{pointer-events:none;}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LOADING TRANSITION — full dark fade used for every floor change (lift
+   travel, respawn), so the floor-data swap underneath never happens
+   visibly mid-frame.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-game-root .loading-fade{position:absolute;inset:0;z-index:40;background:#020304;
+  opacity:0;transition:opacity .28s ease;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;}
+.ns-game-root .loading-fade-text{font-family:var(--font-mono);color:#5c8a78;font-size:13px;
+  letter-spacing:1px;line-height:1.8;max-width:480px;opacity:0;transition:opacity .3s ease .05s;}
+.ns-game-root .loading-fade-text.show{opacity:1;}
+
+/* ── Scene loader (Continue / first scene render) ──────────────────────────
+   Retro pixel "LOADING…" bar, centred on a black screen, shown while the very
+   first scene preloads. The fill width is driven from game.js so it eases up
+   while loading and snaps to 100% right when the scene is ready. Separate from
+   the NullState logo splash; z above the HUD so no top-left text peeks through. */
+.ns-game-root .scene-loader{position:absolute;inset:0;z-index:46;background:#000;
+  display:flex;align-items:center;justify-content:center;pointer-events:none;
+  opacity:1;transition:opacity .28s ease;}
+.ns-game-root .scene-loader.hidden{opacity:0;pointer-events:none;}
+.ns-game-root .scene-loader-box{display:flex;flex-direction:column;align-items:center;
+  gap:9px;width:min(46vw,150px);transform:translateY(-2%);}
+.ns-game-root .scene-loader-label{font-family:var(--font-mono);color:#fff;font-size:9px;
+  letter-spacing:3px;text-transform:uppercase;padding-left:3px;}
+.ns-game-root .scene-loader-bar{width:100%;height:11px;border:2px solid #fff;padding:2px;
+  box-sizing:border-box;background:#000;image-rendering:pixelated;}
+.ns-game-root .scene-loader-fill{height:100%;width:0%;background:#fff;}
+
+@media (orientation:portrait){
+  .ns-game-root .inv-panel-inner{width:min(94vw,380px);padding:16px 14px;}
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TUTORIAL — animated how-to-play overlay, shown once before the first
+   bunker. Each slide demos its concept with a small looping CSS animation
+   instead of static text.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-game-root .tutorial-inner{max-width:420px;width:100%;animation:ns-fadeUp .5s ease;
+  background:rgba(8,14,18,.9);border:1px solid var(--line);border-radius:14px;
+  padding:30px 24px 24px;text-align:center;}
+.ns-game-root .tutorial-visual{position:relative;width:100%;height:140px;
+  display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+.ns-game-root .tut-slide{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+.ns-game-root .tutorial-text{font-size:14px;line-height:1.7;color:#d4ffe8;min-height:64px;margin-bottom:14px;}
+.ns-game-root .tutorial-dots{display:flex;gap:7px;justify-content:center;margin-bottom:18px;}
+.ns-game-root .tut-dot{width:7px;height:7px;border-radius:50%;background:rgba(0,255,136,.18);transition:.25s;}
+.ns-game-root .tut-dot.active{background:var(--green);box-shadow:0 0 8px rgba(0,255,136,.6);}
+
+/* slide 1: joystick auto-drag demo */
+.ns-game-root .tut-stick-base{position:relative;width:96px;height:96px;border-radius:50%;
+  border:2px solid rgba(0,255,136,.3);background:rgba(0,255,136,.04);}
+.ns-game-root .tut-stick-nub{position:absolute;width:40px;height:40px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#5dffb0,#00ff88);
+  top:28px;left:28px;box-shadow:0 0 14px rgba(0,255,136,.5);
+  animation:tutStickDrag 2.6s ease-in-out infinite;}
+@keyframes tutStickDrag{
+  0%,100%{ transform:translate(0,0); }
+  12%{ transform:translate(20px,0); }
+  25%{ transform:translate(20px,20px); }
+  37%{ transform:translate(0,20px); }
+  50%{ transform:translate(-20px,20px); }
+  62%{ transform:translate(-20px,0); }
+  75%{ transform:translate(-20px,-20px); }
+  87%{ transform:translate(0,-20px); }
+}
+
+/* slide 2: auto-attack swing demo */
+.ns-game-root .tut-attack-demo{position:relative;width:200px;height:80px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;}
+.ns-game-root .tut-hero-dot{width:18px;height:18px;border-radius:4px;background:#00ff88;box-shadow:0 0 10px rgba(0,255,136,.6);}
+.ns-game-root .tut-enemy-dot{width:16px;height:16px;border-radius:50%;background:#ff5d54;box-shadow:0 0 10px rgba(255,93,84,.6);
+  animation:tutEnemyHit 1.4s ease-in-out infinite;}
+@keyframes tutEnemyHit{ 0%,70%,100%{ transform:scale(1); opacity:1; } 80%{ transform:scale(1.3); opacity:.5; } 90%{ transform:scale(0.85); opacity:1; } }
+.ns-game-root .tut-swing-arc{position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -50px;
+  border:3px solid rgba(0,255,136,0); border-left-color:#eafff5; border-top-color:#eafff5;
+  border-radius:50%; transform:rotate(-30deg);
+  animation:tutSwing 1.4s ease-in-out infinite;}
+@keyframes tutSwing{
+  0%,55%{ opacity:0; transform:rotate(-30deg) scale(0.7); }
+  65%{ opacity:1; transform:rotate(20deg) scale(1); }
+  78%{ opacity:0; transform:rotate(50deg) scale(1.1); }
+  100%{ opacity:0; }
+}
+
+/* slide 3: floor-clear lock demo */
+.ns-game-root .tut-lock-demo{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.ns-game-root .tut-lock-icon{font-size:42px; animation:tutLockPulse 2.2s ease-in-out infinite;}
+@keyframes tutLockPulse{
+  0%,40%{ transform:scale(1); filter:drop-shadow(0 0 0 rgba(255,80,80,0)); }
+  50%{ transform:scale(1.15); filter:drop-shadow(0 0 10px rgba(0,255,136,.8)); }
+  60%,100%{ transform:scale(1); }
+}
+.ns-game-root .tut-lift-glow{width:60px;height:14px;border-radius:50%;background:rgba(0,255,136,.15);
+  animation:tutLiftGlowPulse 2.2s ease-in-out infinite;}
+@keyframes tutLiftGlowPulse{ 0%,40%{ opacity:.2; } 50%{ opacity:.8; } 60%,100%{ opacity:.2; } }
+
+/* slide 4: ulti / NULL_STRIKE demo */
+.ns-game-root .tut-ulti-demo{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.ns-game-root .tut-bolt{font-size:46px;color:#ffd166;animation:tutBoltFlash 1.6s ease-in-out infinite;}
+@keyframes tutBoltFlash{
+  0%,60%{ opacity:.35; transform:scale(0.9); filter:drop-shadow(0 0 0 rgba(255,209,102,0)); }
+  72%{ opacity:1; transform:scale(1.2); filter:drop-shadow(0 0 16px rgba(255,209,102,.9)); }
+  85%,100%{ opacity:.35; transform:scale(0.9); }
+}
+.ns-game-root .tut-hp-bar{width:140px;height:10px;border-radius:5px;background:rgba(255,59,92,.15);
+  border:1px solid rgba(255,59,92,.4);overflow:hidden;}
+.ns-game-root .tut-hp-fill{height:100%;background:linear-gradient(90deg,#ff3b5c,#ff8a7a);
+  animation:tutHpDrain 1.6s ease-in-out infinite;}
+@keyframes tutHpDrain{ 0%,60%{ width:22%; } 72%{ width:22%; } 100%{ width:22%; } }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   WOODEN INVENTORY THEME  (Phase 3)
+   Rich walnut/chestnut wood panels with brass trim + carved gold headers,
+   tuned to fit vertical MiniPay screens. Overrides the older parchment look
+   for #invPanel, #containerWindow and #itemZoom so all three read as one
+   hand-carved wooden UI. Tabs (Loot/Food/Gear) + equipment rows below.
+   ══════════════════════════════════════════════════════════════════════ */
+.ns-game-root .inv-panel-inner,
+.ns-game-root .container-inner,
+.ns-game-root .item-zoom-inner{
+  color:#f0dcb8;
+  border:2px solid #7a4f24;
+  border-radius:12px;
+  background-color:#33200f;
+  background-image:
+    linear-gradient(180deg, rgba(90,58,28,.55) 0%, rgba(38,23,11,.55) 100%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0px, rgba(0,0,0,.22) 2px, rgba(120,80,40,.06) 2px, rgba(120,80,40,.06) 46px, rgba(0,0,0,.28) 48px),
+    repeating-linear-gradient(88deg, rgba(255,220,160,.03) 0px, rgba(255,220,160,.03) 1px, transparent 1px, transparent 5px),
+    radial-gradient(circle at 20% 12%, rgba(150,100,50,.18), transparent 45%),
+    radial-gradient(circle at 82% 84%, rgba(90,55,25,.20), transparent 50%);
+  box-shadow:0 26px 70px rgba(0,0,0,.65),
+    inset 0 0 0 1px rgba(200,150,80,.18),
+    inset 0 2px 6px rgba(255,220,170,.10),
+    inset 0 -18px 40px rgba(0,0,0,.45);
+}
+/* vertical-fit: taller, narrower panel for portrait MiniPay */
+.ns-game-root .inv-panel-inner{width:min(94vw,400px);max-height:min(88vh,700px);padding:18px 16px;}
+
+/* carved gold headers */
+.ns-game-root .inv-panel-head,
+.ns-game-root .container-title,
+.ns-game-root .container-panel-label{
+  color:#f2cd82;
+  border-bottom-color:rgba(200,150,80,.35);
+  text-shadow:0 1px 0 rgba(0,0,0,.6), 0 0 10px rgba(230,180,90,.25);
+}
+.ns-game-root .inv-close:hover,.ns-game-root .item-zoom-close:hover{color:#f2cd82;}
+.ns-game-root .inv-vitals{border-bottom-color:rgba(200,150,80,.3);}
+
+/* ── tabs ── */
+.ns-game-root .inv-tabs{display:flex;gap:6px;margin-bottom:12px;}
+.ns-game-root .inv-tab{flex:1;cursor:pointer;font-family:var(--font-mono),monospace;
+  letter-spacing:2px;font-size:11px;font-weight:700;color:#b78d59;text-transform:uppercase;
+  padding:9px 4px;border-radius:8px 8px 4px 4px;border:1px solid rgba(120,80,40,.5);
+  background:linear-gradient(180deg,#3d2814,#2a1a0d);transition:.15s;min-height:38px;}
+.ns-game-root .inv-tab:hover{color:#f0dcb8;border-color:#8a5a2b;}
+.ns-game-root .inv-tab.active{color:#2a1705;background:linear-gradient(180deg,#e8bd6f,#c9962f);
+  border-color:#e8bd6f;box-shadow:0 0 14px rgba(230,180,90,.4),inset 0 1px 2px rgba(255,240,200,.5);}
+
+/* ── item slots (recessed carved wood) ── */
+.ns-game-root .inv-item{background:linear-gradient(180deg,#241408,#1a0f06);
+  border:1px solid rgba(120,80,40,.45);border-radius:8px;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.55),inset 0 -1px 0 rgba(200,150,80,.12);}
+.ns-game-root .inv-item:hover{background:linear-gradient(180deg,#301c0c,#22140a);
+  border-color:#8a5a2b;box-shadow:inset 0 0 0 1px rgba(230,180,90,.3),0 0 12px rgba(230,180,90,.18);}
+.ns-game-root .inv-item-name{color:#d8b98a;}
+.ns-game-root .inv-item-value{color:#c39a5f;}
+.ns-game-root .inv-item-count{color:#2a1705;background:linear-gradient(180deg,#e8bd6f,#c9962f);
+  box-shadow:0 1px 2px rgba(0,0,0,.4);}
+.ns-game-root .inv-item-empty{background:rgba(0,0,0,.22);border-style:dashed;border-color:rgba(120,80,40,.25);}
+.ns-game-root .inv-item-empty:hover{background:rgba(0,0,0,.22);border-color:rgba(120,80,40,.25);}
+/* Special vault items (Golden Key / Old Paper) — a clearly DIFFERENT, richer
+   amber background + gold rim so they never read as ordinary loot (owner). */
+.ns-game-root .inv-item.inv-item-special{
+  border-color:rgba(255,214,120,.85);
+  box-shadow:0 0 0 1px rgba(255,214,120,.45) inset,0 0 14px rgba(255,196,74,.35);
+  background:radial-gradient(120% 100% at 50% 0%,#6a4a10 0%,#3a2705 55%,#241703 100%);}
+.ns-game-root .inv-item.inv-item-special:hover{
+  border-color:rgba(255,224,150,1);
+  box-shadow:0 0 0 1px rgba(255,214,120,.7) inset,0 0 22px rgba(255,196,74,.5);
+  background:radial-gradient(120% 100% at 50% 0%,#7d5a16 0%,#472f07 55%,#2c1c03 100%);}
+.ns-game-root .inv-item.queued{border-color:#e07a3a;background:rgba(224,122,58,.14);
+  box-shadow:0 0 0 1px rgba(224,122,58,.4) inset;}
+
+/* ── Vault fragment bar (GAME-DESIGN.md §5.1) ──
+   Spans the whole grid rather than sitting in a cell: it is a progress
+   statement, not an item, and squeezing it into a 1:1 slot beside the Key and
+   the Paper would read as a third collectible. Amber to match the two special
+   items directly above it — it is the bar that buys them — and it disappears
+   entirely once both are held. */
+.ns-game-root .inv-frag{grid-column:1/-1;padding:5px 8px 6px;border-radius:6px;
+  border:1px solid rgba(255,214,120,.3);background:rgba(58,39,5,.5);
+  font-family:var(--font-mono),monospace;cursor:default;}
+.ns-game-root .inv-frag-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.ns-game-root .inv-frag-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#c8a97c;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ns-game-root .inv-frag-count{font-size:11px;font-weight:700;color:#ffd166;flex:0 0 auto;}
+.ns-game-root .inv-frag-track{margin-top:4px;height:4px;border-radius:2px;overflow:hidden;
+  background:rgba(0,0,0,.45);box-shadow:inset 0 1px 2px rgba(0,0,0,.5);}
+.ns-game-root .inv-frag-fill{display:block;height:100%;border-radius:2px;
+  background:linear-gradient(90deg,#c9962f,#ffd166);transition:width .3s ease;}
+
+/* ── equipment tab (single column list) ── */
+.ns-game-root .inv-items.equip-mode{grid-template-columns:1fr;gap:8px;}
+.ns-game-root .equip-slotline{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.ns-game-root .equip-slot{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;
+  background:linear-gradient(180deg,#241408,#180d05);border:1px solid rgba(120,80,40,.4);text-align:left;}
+.ns-game-root .equip-slot-k{font-size:9px;letter-spacing:1.5px;color:#b78d59;}
+.ns-game-root .equip-slot-v{font-size:11px;color:#f0dcb8;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ns-game-root .equip-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;text-align:left;
+  background:linear-gradient(180deg,#2b1a0d,#1d1108);border:1px solid rgba(120,80,40,.4);}
+.ns-game-root .equip-row.equipped{border-color:#e8bd6f;box-shadow:0 0 12px rgba(230,180,90,.22) inset;}
+.ns-game-root .equip-row.equip-empty{display:block;text-align:center;color:#b78d59;font-size:11px;line-height:1.6;padding:16px 12px;}
+/* v72 (user finding #1): Gear tab split — EQUIPPED pinned on top, divider,
+   then owned-but-unequipped below. Section headers + hairline divider. */
+.ns-game-root .equip-row.equip-sect{display:block;background:none;border:none;box-shadow:none;padding:6px 2px 2px;
+  color:#e8bd6f;font-size:10px;letter-spacing:2px;font-weight:700;text-transform:uppercase;opacity:.85;}
+/* category sub-header inside the OWNED list (Weapons / Armor / Skins) — a shade
+   smaller/dimmer + indented so it reads as a level below the OWNED section. */
+.ns-game-root .equip-row.equip-sect.equip-subsect{padding:5px 2px 1px 8px;font-size:9px;letter-spacing:1.5px;
+  color:#c39a5f;opacity:.7;}
+.ns-game-root .equip-row.equip-divider{display:block;background:none;border:none;box-shadow:none;padding:0;margin:6px 2px;
+  height:1px;background:linear-gradient(90deg,transparent,rgba(232,189,111,.45),transparent);}
+.ns-game-root .equip-icon{width:36px;height:36px;image-rendering:pixelated;flex-shrink:0;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
+.ns-game-root .equip-icon.missing{visibility:hidden;}
+.ns-game-root .equip-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.ns-game-root .equip-name{font-size:12px;font-weight:700;color:#f0dcb8;letter-spacing:.5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ns-game-root .equip-stat{font-size:10px;color:#c39a5f;letter-spacing:.5px;text-transform:uppercase;}
+.ns-game-root .equip-btn{flex-shrink:0;cursor:pointer;font-family:var(--font-mono),monospace;
+  font-size:10px;letter-spacing:1.5px;font-weight:700;padding:8px 12px;border-radius:6px;min-height:38px;
+  color:#2a1705;background:linear-gradient(180deg,#e8bd6f,#c9962f);border:1px solid #e8bd6f;transition:.15s;}
+.ns-game-root .equip-btn:hover{box-shadow:0 0 14px rgba(230,180,90,.5);transform:translateY(-1px);}
+.ns-game-root .equip-btn.on{color:#f0dcb8;background:linear-gradient(180deg,#3d2814,#2a1a0d);border-color:#8a5a2b;}
+
+/* ── buttons: brass wood look ── */
+.ns-game-root .burn-confirm{background:linear-gradient(180deg,#3d2814,#2a1a0d);color:#e6a15a;
+  border:1px solid #8a5a2b;}
+.ns-game-root .burn-confirm:hover{background:linear-gradient(180deg,#4a3018,#331f10);}
+.ns-game-root .burn-confirm:disabled{background:#241408;color:#7a5a34;border-color:rgba(120,80,40,.4);}
+.ns-game-root .burn-summary{color:#c39a5f;border-top-color:rgba(200,150,80,.3);}
+.ns-game-root .container-panel-label{color:#e6c07a;}
+.ns-game-root .item-zoom-name{color:#f2cd82;}
+.ns-game-root .item-zoom-qty,.ns-game-root .item-zoom-value{color:#c39a5f;}
+.ns-game-root .item-zoom-code{color:#e8bd6f;border-color:rgba(230,180,90,.4);background:rgba(0,0,0,.22);}
+.ns-game-root .item-zoom-btn.take{background:linear-gradient(180deg,#e8bd6f,#c9962f);color:#2a1705;border-color:#e8bd6f;}
+.ns-game-root .item-zoom-btn.take:hover{box-shadow:0 0 14px rgba(230,180,90,.5);}
+
+/* Phase 2 — Glitch Shard strip inside the inventory panel (run + banked).
+   Same parchment palette as the panel; violet accent matches the in-game
+   shard pickup color (#b46bff). Hidden (display:none via .hidden) until
+   the player owns any shards, so the panel is unchanged for newcomers. */
+.ns-game-root .inv-materials{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:2px 0 10px;padding:7px 10px;background:rgba(120,90,160,.10);
+  border:1px solid rgba(120,90,160,.30);font-size:11px;letter-spacing:1px;color:#5c4d70;
+  clip-path:polygon(0 3px,3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px));}
+.ns-game-root .inv-materials.hidden{display:none;}
+.ns-game-root .inv-materials .mat-k{color:#8a4dcf;font-weight:700;letter-spacing:2px;}
+.ns-game-root .inv-materials .mat-v b{color:#3a2a52;}
+.ns-game-root .inv-materials .mat-v i{color:#8a4dcf;font-style:normal;font-size:10px;}
+.ns-game-root .inv-materials .mat-note{margin-left:auto;font-size:9px;color:#9a8ab0;letter-spacing:1px;}
+
+/* Phase 3 — Drop-Rate Elixir trigger, third button in the right-hand
+   control cluster (under inventory + settings). Violet pixel skin to match
+   the shard/buff color family. Badge shows owned count or live countdown. */
+.ns-game-root .ns-elixir-trigger{position:relative;pointer-events:auto;
+  width:44px;height:44px;border-radius:0;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7a4db0 0%,#5c3690 55%,#412066 100%);color:#f0e4ff;
+  display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(0 5px,5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px));
+  box-shadow:inset 0 0 0 2px #2e1848, inset 0 3px 0 2px rgba(240,228,255,.18), inset 0 -4px 0 2px rgba(0,0,0,.4);
+  transition:.15s;}
+.ns-game-root .ns-elixir-trigger:hover{background:linear-gradient(180deg,#8c5fc4 0%,#6b44a0 55%,#4c2a76 100%);color:#fff;
+  box-shadow:inset 0 0 0 2px #b46bff, inset 0 3px 0 2px rgba(240,228,255,.22), inset 0 -4px 0 2px rgba(0,0,0,.4);}
+.ns-game-root .ns-elixir-trigger:active{transform:translateY(1px);
+  box-shadow:inset 0 0 0 2px #2e1848, inset 0 4px 0 2px rgba(0,0,0,.35);}
+.ns-game-root .ns-elixir-badge{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;
+  padding:0 3px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono),monospace;font-size:9px;font-weight:700;line-height:1;
+  color:#1a0f2a;background:#ffd166;border:1px solid #2e1848;border-radius:8px;}
+.ns-game-root .ns-elixir-badge-timer{background:#b46bff;color:#fff;min-width:30px;border-radius:6px;
+  box-shadow:0 0 8px rgba(180,107,255,.6);}
+
+/* Mute toggle — sits at the bottom of the right-hand control cluster, same
+   chunky steel skin as the settings gear. Always visible during play so a
+   player can silence the game in one tap (owner: "mute gampang dilihat"). */
+.ns-game-root .ns-mute-trigger{position:relative;pointer-events:auto;
+  width:44px;height:44px;border-radius:0;cursor:pointer;border:0;
+  background:linear-gradient(180deg,#7a7f85 0%,#565a60 55%,#3e4247 100%);color:#e8ebee;
+  display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(0 5px,5px 0,calc(100% - 5px) 0,100% 5px,100% calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,0 calc(100% - 5px));
+  box-shadow:inset 0 0 0 2px #2e3134, inset 0 3px 0 2px rgba(255,255,255,.16), inset 0 -4px 0 2px rgba(0,0,0,.4);
+  transition:.15s;}
+.ns-game-root .ns-mute-trigger:hover{background:linear-gradient(180deg,#8c9197 0%,#63676d 55%,#484c52 100%);color:#fff;
+  box-shadow:inset 0 0 0 2px #cfd4d9, inset 0 3px 0 2px rgba(255,255,255,.2), inset 0 -4px 0 2px rgba(0,0,0,.4);}
+.ns-game-root .ns-mute-trigger:active{transform:translateY(1px);
+  box-shadow:inset 0 0 0 2px #2e3134, inset 0 4px 0 2px rgba(0,0,0,.35);}
+/* When muted, tint the button red-amber so its state reads at a glance. */
+.ns-game-root .ns-mute-trigger.is-muted{background:linear-gradient(180deg,#a8564e 0%,#7e3b35 55%,#5c2824 100%);color:#ffdedb;
+  box-shadow:inset 0 0 0 2px #3a1a17, inset 0 3px 0 2px rgba(255,255,255,.14), inset 0 -4px 0 2px rgba(0,0,0,.4);}
+.ns-game-root .ns-mute-trigger.is-muted:hover{background:linear-gradient(180deg,#c26a61 0%,#94473f 55%,#6c302b 100%);color:#fff;}
+
+/* ── Right-hand HUD rail (settings / bag / elixir / mute) ─────────────────
+   Owner, first pass: "use the buttons from the maps in here too."
+   Owner, this pass: "they're not big enough — make them the same size as the
+   map's."
+
+   The first pass kept the icons at 30px inside the existing 44px boxes, on
+   the reasoning that 44px is the floor for a thumb. That protected the tap
+   target and missed the point: at 30px against the map rail's 46px they
+   still read as a different, smaller set of controls than the ones two taps
+   away. They are 46px now, in a 52px box — the rail's own numbers — so the
+   two really are the same control at the same size, and the tap target grew
+   rather than shrank.
+
+   The four used to be positioned individually, each with a `top:` in each
+   orientation: eight numbers that all had to agree, and that silently
+   decided the on-screen order independently of the markup. One flex column
+   states the size and the gap once instead.
+
+   The short-viewport rule below is why the icon size lives here rather than
+   inline on the <img>: an inline style would outrank it, and the rail would
+   overflow the bottom of a landscape phone with no way to stop it. */
+.ns-game-root .ns-hud-rail{position:absolute;top:156px;right:12px;z-index:7;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+.ns-game-root .ns-hud-rail > *{pointer-events:auto;}
+.ns-game-root .ns-hud-ico{width:46px;height:46px;display:block;image-rendering:pixelated;}
+@media (orientation:portrait){
+  /* The minimap shrinks to 78px on a narrow portrait screen (see
+     getMinimapMetrics in game.js), so the rail follows it up. */
+  .ns-game-root .ns-hud-rail{top:120px;}
+}
+/* `.is-mapicon` strips the CSS plate so the rail's own icon IS the button,
+   exactly as on the map. The drop-shadow is the rail's, so the icons stay
+   legible over a bright floor tile the way they do over the map art. */
+.ns-game-root .inv-btn.is-mapicon,
+.ns-game-root .ns-settings-trigger.is-mapicon,
+.ns-game-root .ns-elixir-trigger.is-mapicon,
+.ns-game-root .ns-mute-trigger.is-mapicon{
+  width:52px;height:52px;
+  background:none;box-shadow:none;color:inherit;
+  clip-path:none;
+  filter:drop-shadow(0 3px 5px rgba(0,0,0,.7));}
+
+/* Landscape on a phone leaves ~360px of height for everything. Four 52px
+   buttons plus gaps do not fit under the minimap there, so the rail steps
+   back down to the old 44px box — still a legal tap target, and still the
+   map's artwork, just not the map's scale on a screen that has no room for
+   it. */
+@media (max-height:460px){
+  .ns-game-root .ns-hud-rail{top:130px;gap:5px;}
+  .ns-game-root .ns-hud-ico{width:38px;height:38px;}
+  .ns-game-root .inv-btn.is-mapicon,
+  .ns-game-root .ns-settings-trigger.is-mapicon,
+  .ns-game-root .ns-elixir-trigger.is-mapicon,
+  .ns-game-root .ns-mute-trigger.is-mapicon{width:44px;height:44px;}
+}
+
+.ns-game-root .inv-btn.is-mapicon:hover,
+.ns-game-root .ns-settings-trigger.is-mapicon:hover,
+.ns-game-root .ns-elixir-trigger.is-mapicon:hover,
+.ns-game-root .ns-mute-trigger.is-mapicon:hover{
+  background:none;box-shadow:none;
+  filter:drop-shadow(0 0 7px rgba(255,209,102,.55)) drop-shadow(0 3px 5px rgba(0,0,0,.7));}
+.ns-game-root .inv-btn.is-mapicon:active,
+.ns-game-root .ns-settings-trigger.is-mapicon:active,
+.ns-game-root .ns-elixir-trigger.is-mapicon:active,
+.ns-game-root .ns-mute-trigger.is-mapicon:active{
+  transform:scale(.9);box-shadow:none;
+  filter:brightness(1.25) drop-shadow(0 3px 5px rgba(0,0,0,.7));}
+
+/* Sound and elixir now have generated icons of their own (see
+   assets-src/worldmap/icons/volume*.png, elixir.png), drawn against the rail
+   set's own frame plate, so all four controls are the same kind of object.
+   The interim green MusicButton copy that stood in for sound is gone — it was
+   a stand-in for a missing asset, not a design. */
+
+/* ─── THE VAULT WIN ────────────────────────────────────────────────────────
+   Owner, after cracking one for real: "tidak ada pop up untuk user, pop up
+   menang usdt dan jumlahnya, dan penjelasan auto transfer."
+
+   This is the only screen in the game where real money moves, and it used to
+   be one line inside the code panel that vanished after 1.4 seconds. It gets
+   the weight now: gold rather than the vault's purple, the amount as the
+   largest text on screen, and the auto-transfer said plainly — a player who
+   does not know the transfer is automatic goes hunting for a claim button that
+   does not exist and concludes they were not paid.
+
+   It does not auto-dismiss; CONTINUE is the only way out. */
+.ns-game-root #vaultWinWindow{background:rgba(3,6,5,.9);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:18px 14px;}
+.ns-game-root .vwin-inner{position:relative;max-width:340px;width:100%;
+  /* Clips the decorative flare below, which is deliberately wider than the
+     card. Without this it stuck 34px out of each side and pushed a 390px
+     phone into horizontal scroll — caught by the overflow assertion in
+     scripts/test-vault-win.js, not by looking at it. */
+  overflow:hidden;
+  border:1px solid rgba(255,209,102,.5);border-radius:10px;padding:26px 20px 20px;
+  color:#f6efe0;font-family:var(--font-mono),monospace;text-align:center;
+  background-color:#0c0a05;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255,209,102,.20) 0%, transparent 58%),
+    linear-gradient(180deg, rgba(28,22,8,.95), rgba(6,5,3,.97));
+  box-shadow:0 24px 60px rgba(0,0,0,.75), inset 0 0 44px rgba(255,190,60,.12);
+  animation:ns-fadeUp .32s ease;}
+/* A single soft flare behind the number rather than confetti: it has to read
+   on a mid-range phone in daylight, and it must not cost a frame. */
+.ns-game-root .vwin-burst{position:absolute;inset:-30% -10% auto -10%;height:150px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 60%, rgba(255,209,102,.30), transparent 68%);
+  animation:ns-vwinPulse 2.6s ease-in-out infinite;}
+@keyframes ns-vwinPulse{0%,100%{opacity:.65}50%{opacity:1}}
+.ns-game-root .vwin-title{position:relative;font-family:var(--font-cinzel),serif;font-weight:700;
+  font-size:clamp(15px,3.6vw,19px);letter-spacing:3px;color:#ffd166;
+  text-shadow:0 0 20px rgba(255,209,102,.55);margin-bottom:10px;}
+.ns-game-root .vwin-amount{position:relative;font-weight:800;
+  font-size:clamp(30px,9vw,44px);line-height:1.05;letter-spacing:1px;color:#fff6dd;
+  text-shadow:0 0 26px rgba(255,209,102,.6);margin-bottom:12px;word-break:break-word;}
+.ns-game-root .vwin-note{position:relative;font-size:12px;line-height:1.6;color:#cbb98f;margin-bottom:14px;}
+.ns-game-root .vwin-note b{color:#ffd166;}
+.ns-game-root .vwin-tx{position:relative;display:inline-block;margin-bottom:14px;
+  font-size:11px;letter-spacing:.4px;color:#9fd8bd;text-decoration:underline;}
+.ns-game-root .vwin-btn{position:relative;width:100%;}

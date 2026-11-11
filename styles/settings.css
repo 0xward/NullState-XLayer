@@ -1,0 +1,151 @@
+/* settings.css — the in-run Settings modal.
+   ─────────────────────────────────────────────────────────────────────────────
+   Split out of styles/game.css. That file was ONE stylesheet for the whole
+   /game route, imported by the route's layout, so every byte of it blocked the
+   world map's first render — 14.8KB transferred, 12.7KB of it unused on the
+   map, 680ms of render-blocking time by PageSpeed's measure. The map does not
+   need the dungeon HUD's styles to draw a map.
+
+   Imported by components/game/SettingsModal.tsx, which is reached through a
+   dynamically imported screen, so this is fetched the first time somebody
+   opens Settings and never before.
+
+   ── Why this file was rewritten ──────────────────────────────────────────────
+   It used to be two stacked blocks: an aged bone-white "parchment" panel from
+   an early art direction, then a retheme that repainted it dark. That got the
+   colours right and left everything else — pill toggles, 6px rounded corners,
+   wide-tracked uppercase labels, a bare slider — belonging to the old look.
+   Next to SettingsScreen (the same settings, reached from the world map) it
+   read as a different product, which is what the owner saw.
+
+   So this is now one sheet written in the map's own language, and the values
+   below are taken from components/game/SettingsScreen.tsx rather than invented:
+   card sections on rgba(43,26,13,.55), 10px/2px-tracked section labels in
+   #5f8d78, 12px sentence-case row labels in #f0dcb8 over 9px hints in #9c7a4f,
+   square 44px-tall controls, and the notched toggle. Change one, change both.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════════════════════════
+   OVERLAY + PANEL
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-settings-overlay{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;
+  background:rgba(5,10,8,.94);backdrop-filter:blur(2px);padding:16px;}
+
+.ns-settings-panel{position:relative;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;
+  overscroll-behavior:contain;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  border-radius:8px;padding:0 14px 18px;animation:ns-fadeUp .25s ease;
+  color:#cfe9dc;font-family:var(--font-mono),monospace;
+  background-color:#071310;
+  /* Same faint green wash + scanline grain the rest of the game uses. */
+  background-image:
+    radial-gradient(circle at 14% 16%, rgba(57,255,154,.055) 0%, transparent 42%),
+    radial-gradient(circle at 82% 84%, rgba(57,255,154,.04) 0%, transparent 40%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0px, rgba(255,255,255,.018) 1px, transparent 1px, transparent 3px);
+  border:1px solid rgba(122,79,36,.55);
+  box-shadow:0 24px 60px rgba(0,0,0,.72), inset 0 0 40px rgba(0,0,0,.35);}
+.ns-settings-panel::-webkit-scrollbar{width:8px;}
+.ns-settings-panel::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:4px;}
+.ns-settings-panel::-webkit-scrollbar-thumb{background:rgba(57,255,154,.28);border-radius:4px;}
+.ns-settings-panel::-webkit-scrollbar-thumb:hover{background:rgba(57,255,154,.45);}
+
+/* ════════════════════════════════════════════════════════════════════════
+   HEADER — the map screen's kicker + title, with the brand mark kept.
+   Sticky so the close button is always reachable in a long scroll.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-settings-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin:0 -14px 16px;padding:14px;background:#071310;
+  border-bottom:1px solid rgba(122,79,36,.55);box-shadow:0 6px 10px -6px rgba(0,0,0,.5);}
+.ns-settings-title-wrap{display:flex;align-items:center;gap:10px;min-width:0;}
+.ns-settings-logo-corner{height:20px;width:auto;flex-shrink:0;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
+.ns-settings-title{font-size:17px;font-weight:700;letter-spacing:1px;color:#8ef5bd;line-height:1;}
+/* Matches the map's "◂ MAP" button so leaving a menu looks the same wherever
+   you are. 44px tall because this game is played one-handed. */
+.ns-settings-close{background:none;cursor:pointer;border:1px solid #7a4f24;border-radius:4px;
+  font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#c39a5f;
+  min-height:44px;padding:0 12px;flex-shrink:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono),monospace;transition:.15s;}
+.ns-settings-close:hover{color:#e8bd6f;border-color:#e8bd6f;}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SECTIONS — cards, exactly as on the map, instead of dashed rules
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-settings-section{margin-bottom:14px;padding:12px;border-radius:8px;
+  border:1px solid rgba(57,255,154,.18);background:rgba(43,26,13,.55);}
+.ns-settings-section:last-child{margin-bottom:0;}
+.ns-settings-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#5f8d78;margin-bottom:8px;}
+.ns-settings-hint{font-size:9px;line-height:1.6;color:#9c7a4f;margin:6px 0 0;}
+
+/* Row label + its hint, with the control pushed to the far edge. */
+.ns-settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ns-settings-rowtext{min-width:0;}
+.ns-settings-rowtext .t{display:block;font-size:12px;color:#f0dcb8;}
+.ns-settings-rowtext .h{display:block;font-size:9px;line-height:1.5;color:#9c7a4f;margin-top:2px;}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CONTROLS — square, 44px tall, the map's palette
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-settings-btn-primary{width:100%;margin-top:10px;min-height:44px;padding:0 16px;cursor:pointer;
+  background:#39ff9a;color:#04140c;border:2px solid #0a3d24;font-family:var(--font-mono),monospace;
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;transition:.15s;}
+.ns-settings-btn-primary:hover{background:#5affae;}
+.ns-settings-btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.ns-settings-btn-secondary{min-height:44px;padding:0 16px;cursor:pointer;white-space:nowrap;
+  background:#39ff9a;color:#04140c;border:2px solid #0a3d24;
+  font-family:var(--font-mono),monospace;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.ns-settings-btn-secondary:hover{background:#5affae;}
+.ns-settings-btn-secondary:disabled{opacity:.4;cursor:not-allowed;}
+
+.ns-settings-username-row{display:flex;gap:8px;align-items:stretch;}
+.ns-settings-input{flex:1;min-width:0;min-height:44px;padding:0 12px;
+  background:rgba(0,0,0,.4);border:1px solid #7a4f24;color:#f0dcb8;
+  font-family:var(--font-mono),monospace;font-size:13px;}
+.ns-settings-input:focus{outline:none;border-color:#e8bd6f;}
+.ns-settings-success{font-size:10px;color:#e8bd6f;margin-top:8px;}
+.ns-settings-error{font-size:10px;color:#ff8a6a;margin-top:8px;}
+
+/* Notched ON/OFF switch — the map's shape, not a rounded pill. */
+.ns-settings-toggle-switch{position:relative;width:52px;height:30px;padding:0;flex-shrink:0;cursor:pointer;
+  background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.18);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  transition:background-color .15s ease;}
+.ns-settings-toggle-switch.is-on{background:#14b869;border-color:#e8bd6f;}
+.ns-settings-toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;
+  background:#c39a5f;transition:transform .15s ease;}
+.ns-settings-toggle-switch.is-on .ns-settings-toggle-knob{background:#04140c;transform:translateX(22px);}
+
+/* Native range with accent-color, so the played part of the track is filled —
+   the bare grey line the old sheet drew gave no read of the current level. */
+.ns-settings-slider{width:100%;margin-top:8px;accent-color:#e8bd6f;cursor:pointer;touch-action:pan-x;}
+.ns-settings-slider:disabled{opacity:.4;cursor:not-allowed;}
+.ns-settings-volume-value{font-size:11px;color:#e8bd6f;font-weight:700;}
+
+/* Season Pass badge — the one lit element in the panel, so an active pass is
+   visible at a glance without reading. */
+.ns-settings-pass{margin-top:6px;display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;letter-spacing:.5px;color:#e8bd6f;
+  border:1px solid rgba(57,255,154,.5);background:rgba(57,255,154,.08);
+  padding:8px 10px;text-shadow:0 0 6px rgba(57,255,154,.6);}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LINKS — Support / Terms / Privacy live here because MiniPay's submission
+   checklist requires them reachable from inside the app, and /game never
+   renders the marketing footer.
+   ════════════════════════════════════════════════════════════════════════ */
+.ns-settings-links{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.ns-settings-link{font-size:11px;color:#c39a5f;text-decoration:underline;text-underline-offset:3px;
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 8px;}
+.ns-settings-link:hover{color:#e8bd6f;}
+.ns-settings-feedback-link{align-self:center;}
+.ns-settings-legal-row{display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.08);width:100%;}
+.ns-settings-legal-row .ns-settings-link{font-size:10px;text-transform:uppercase;letter-spacing:2px;}
+.ns-settings-legal-sep{color:rgba(255,255,255,.25);font-size:10px;}
+
+.ns-settings-footer-logos{display:flex;align-items:center;justify-content:center;gap:18px;
+  border-top:1px solid rgba(255,255,255,.08);width:100%;padding-top:12px;margin-top:4px;}
+.ns-settings-footer-logo-link{display:flex;align-items:center;justify-content:center;width:24px;height:24px;
+  opacity:.75;transition:opacity .15s,transform .15s;padding:9px;box-sizing:content-box;}
+.ns-settings-footer-logo-link:hover{opacity:1;transform:translateY(-2px);}
+.ns-settings-footer-logo-link img{width:100%;height:100%;object-fit:contain;border-radius:50%;}
