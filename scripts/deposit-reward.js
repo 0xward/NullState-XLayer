@@ -99,8 +99,8 @@ const { xLayer, xLayerTestnet } = _viemChains
 // mainnet the contracts do not exist yet: set NEXT_PUBLIC_TREASURE_VAULT_ADDRESS
 // / NEXT_PUBLIC_REWARD_CONTRACT_ADDRESS in the env, or the tool refuses to run
 // (never guess a mainnet address).
-const TESTNET_VAULT_ADDRESS = '0x55567455a9be9e764cdf983a31e7d1e23c67d7ee'
-const TESTNET_REWARD_ADDRESS = '0x50b16bd7edb7b533aaee9457c16c8f3526012eaf'
+const TESTNET_VAULT_ADDRESS = '0x0Bf0F45774848A9d4B9cC672b247f575A5822638'
+const TESTNET_REWARD_ADDRESS = '0x3a8396D2c8f5aA22b382b9DB03517CB453190334'
 // NullStateRewardV3 (YYYYMM season ids). The old V2
 // (0x38F85c7cE8757E2940938D4e49bCDaE1CB5D475A) is retired — its owner-only
 // setters still WORK, so a stale default here would let season-rewards
@@ -117,7 +117,7 @@ const TOKENS = {
 // instead of transferFrom. The marker VALUE is inherited from the deployed
 // contracts — do not change it here; the contracts' owner setter is the
 // only way it ever moves. On X Layer the native token is OKB (18 decimals).
-const NATIVE_TOKEN_MARKER = '0x471EcE3750Da237f93B8E339c536989b8978a438'
+const NATIVE_TOKEN_MARKER = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 // ── minimal ABIs (only what this tool calls) ──
 const ERC20_ABI = [

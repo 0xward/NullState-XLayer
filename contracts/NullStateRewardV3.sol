@@ -10,7 +10,7 @@ pragma solidity ^0.8.20;
  * - Seasonal leaderboards and bonus rewards (top 3) — gated: claiming a
  *   rank bonus requires the user held an active Season Pass for that
  *   season (see claimSeasonBonus() below).
- * - Multi-token support (USDm, USDT, USDC, native token)
+ * - Multi-token support (primary stablecoin, USDT, USDC, native token)
  * - Integration with PassSBTv3 for pass verification
  * - Backend-driven leaderboard updates via cron jobs
  *
@@ -53,13 +53,13 @@ pragma solidity ^0.8.20;
  * WHAT ELSE CHANGED FROM V1:
  * - RANK1_REWARD / RANK2_REWARD / RANK3_REWARD are no longer `constant`.
  *   They're now `rank1Reward` / `rank2Reward` / `rank3Reward`, regular
- *   state variables (still defaulting to 20 / 5 / 3 USDm) with an
+ *   state variables (still defaulting to 20 / 5 / 3 primary tokens) with an
  *   owner-only setter (`setRankRewards`), so reward amounts can change
  *   for future seasons without a redeploy.
  * - Token addresses are now owner-settable via the set*Token setters,
  *   in addition to being corrected at deploy time — so a future address
- *   mistake (or a token migration, as already happened once with
- *   cUSD -> USDm) doesn't require another full redeploy.
+ *   mistake (or a token migration, as has already happened once)
+ *   doesn't require another full redeploy.
  * - claimSeasonBonus() now requires the caller held an active Season
  *   Pass (PassSBTv3.hasPassForSeason) for the SPECIFIC season being
  *   claimed — not just "any pass ever" and not "a pass for whatever
@@ -93,22 +93,21 @@ contract NullStateRewardV3 is Ownable {
     uint256 public constant TOTAL_SEASONS = 6;
 
     // ============ Supported Tokens ============
-    // Token addresses — see "WHY V2 EXISTS" above for the
-    // wrong values these replace. No longer hardcoded-only: each has an
+    // Token addresses on X Layer. No longer hardcoded-only: each has an
     // owner-only setter below in case of a future migration/correction.
-    IERC20 public usdmToken = IERC20(0x765DE816845861e75A25fCA122bb6898B8B1282a);
-    IERC20 public usdtToken = IERC20(0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e);
-    IERC20 public usdcToken = IERC20(0xcebA9300f2b948710d2653dD7B07f33A8B32118C);
-    address public celoToken = 0x471EcE3750Da237f93B8E339c536989b8978a438; // Native token marker
+    IERC20 public primaryToken = IERC20(address(0));
+    IERC20 public usdtToken = IERC20(0x779Ded0c9e1022225f8E0630b35a9b54bE713736);
+    IERC20 public usdcToken = IERC20(0xB6CEceAB302E2E4948951eE7843FC24E92933061);
+    address public nativeToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE; // Native token marker
 
     IPassSBT public passSBT;
 
     // ============ Configurable Parameters ============
-    uint256 public weeklyPoolSize = 2e18; // 2 USDm (flexible)
-    uint256 public maxPerUserPerWeek = 5e17; // 0.5 USDm (flexible)
-    uint256 public rank1Reward = 20e18; // 20 USDm (flexible)
-    uint256 public rank2Reward = 5e18; // 5 USDm (flexible)
-    uint256 public rank3Reward = 3e18; // 3 USDm (flexible)
+    uint256 public weeklyPoolSize = 2e18; // 2 primary tokens (flexible)
+    uint256 public maxPerUserPerWeek = 5e17; // 0.5 primary tokens (flexible)
+    uint256 public rank1Reward = 20e18; // 20 primary tokens (flexible)
+    uint256 public rank2Reward = 5e18; // 5 primary tokens (flexible)
+    uint256 public rank3Reward = 3e18; // 3 primary tokens (flexible)
 
     // ============ Data Structures ============
     struct WeeklyPool {
@@ -239,7 +238,7 @@ contract NullStateRewardV3 is Ownable {
      * @dev Replaces v1's RANK1_REWARD/RANK2_REWARD/RANK3_REWARD constants.
      * Amounts are in wei of whichever token is deposited for that season
      * via depositSeasonBonus() — same units as before (e.g. 20e18 = 20
-     * tokens for an 18-decimal token like USDm).
+     * tokens for an 18-decimal token).
      */
     function setRankRewards(
         uint256 _rank1Reward,
@@ -263,12 +262,12 @@ contract NullStateRewardV3 is Ownable {
     }
 
     /**
-     * @notice Update the USDm token address (owner-only migration/fix path)
+     * @notice Update the primary token address (owner-only migration/fix path)
      */
-    function setUsdmToken(address _token) external onlyOwner {
+    function setPrimaryToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
-        usdmToken = IERC20(_token);
-        emit TokenAddressUpdated("USDm", _token);
+        primaryToken = IERC20(_token);
+        emit TokenAddressUpdated("PRIMARY", _token);
     }
 
     /**
@@ -292,10 +291,10 @@ contract NullStateRewardV3 is Ownable {
     /**
      * @notice Update the native-token marker address (owner-only fix path)
      */
-    function setCeloToken(address _token) external onlyOwner {
+    function setNativeToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
-        celoToken = _token;
-        emit TokenAddressUpdated("CELO", _token);
+        nativeToken = _token;
+        emit TokenAddressUpdated("NATIVE", _token);
     }
 
     // ============ Burn Tracking (Backend) ============
@@ -305,7 +304,7 @@ contract NullStateRewardV3 is Ownable {
      * @param _user User burning items
      * @param _itemCount Number of items burned
      * @param _burnValue Total value in wei of reward token
-     * @param _rewardToken Token used for reward (USDm, USDT, USDC, or the native token)
+     * @param _rewardToken Token used for reward (primary stablecoin, USDT, USDC, or the native token)
      */
     function recordBurn(
         address _user,
@@ -317,10 +316,10 @@ contract NullStateRewardV3 is Ownable {
         require(_itemCount > 0, "Invalid item count");
         require(_burnValue > 0, "Invalid burn value");
         require(
-            _rewardToken == address(usdmToken) ||
+            _rewardToken == address(primaryToken) ||
             _rewardToken == address(usdtToken) ||
             _rewardToken == address(usdcToken) ||
-            _rewardToken == celoToken,
+            _rewardToken == nativeToken,
             "Unsupported token"
         );
 
@@ -356,16 +355,16 @@ contract NullStateRewardV3 is Ownable {
         uint256 _amount
     ) external onlyOwner {
         require(
-            _rewardToken == address(usdmToken) ||
+            _rewardToken == address(primaryToken) ||
             _rewardToken == address(usdtToken) ||
             _rewardToken == address(usdcToken) ||
-            _rewardToken == celoToken,
+            _rewardToken == nativeToken,
             "Unsupported token"
         );
         require(_amount > 0, "Amount must be > 0");
 
         // Transfer tokens
-        if (_rewardToken != celoToken) {
+        if (_rewardToken != nativeToken) {
             require(
                 IERC20(_rewardToken).transferFrom(msg.sender, address(this), _amount),
                 "Transfer failed"
@@ -416,7 +415,7 @@ contract NullStateRewardV3 is Ownable {
         pool.claimedAmount = pool.claimedAmount + (toClaim);
 
         // Transfer reward token
-        if (pool.rewardToken == celoToken) {
+        if (pool.rewardToken == nativeToken) {
             (bool success, ) = msg.sender.call{value: toClaim}("");
             require(success, "Transfer failed");
         } else {
@@ -465,16 +464,16 @@ contract NullStateRewardV3 is Ownable {
     ) external onlyOwner {
         require(_seasonId > 0, "Invalid season"); // V3: YYYYMM season ids (was capped at TOTAL_SEASONS=6, which broke the whole season-bonus chain -- see header)
         require(
-            _rewardToken == address(usdmToken) ||
+            _rewardToken == address(primaryToken) ||
             _rewardToken == address(usdtToken) ||
             _rewardToken == address(usdcToken) ||
-            _rewardToken == celoToken,
+            _rewardToken == nativeToken,
             "Unsupported token"
         );
         require(_amount >= rank1Reward + rank2Reward + rank3Reward, "Insufficient amount");
 
         // Transfer tokens
-        if (_rewardToken != celoToken) {
+        if (_rewardToken != nativeToken) {
             require(
                 IERC20(_rewardToken).transferFrom(msg.sender, address(this), _amount),
                 "Transfer failed"
@@ -526,7 +525,7 @@ contract NullStateRewardV3 is Ownable {
         userSeasonClaimed[msg.sender][_seasonId] = true;
 
         // Transfer reward
-        if (lb.rewardToken == celoToken) {
+        if (lb.rewardToken == nativeToken) {
             (bool success, ) = msg.sender.call{value: rewardAmount}("");
             require(success, "Transfer failed");
         } else {
@@ -632,7 +631,7 @@ contract NullStateRewardV3 is Ownable {
      * @notice Emergency withdraw tokens (owner only)
      */
     function emergencyWithdraw(address _token, uint256 _amount) external onlyOwner {
-        if (_token == celoToken) {
+        if (_token == nativeToken) {
             (bool success, ) = msg.sender.call{value: _amount}("");
             require(success, "Withdraw failed");
         } else {

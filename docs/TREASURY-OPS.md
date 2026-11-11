@@ -25,13 +25,15 @@ Mainnet contracts are not deployed yet — add their addresses here after the ma
 
 | Contract | Address | ID scheme |
 |----------|---------|-----------|
-| PassSBTv3 | `0x5e51fe3036ed867053e1625edca3e0c0e96aac94` | Season `YYYYMM` |
-| Treasure Vault (weekly) | `0x55567455a9be9e764cdf983a31e7d1e23c67d7ee` | ISO week `YYYYWW` |
-| Season Bonus / RewardV3 (monthly) | `0x50b16bd7edb7b533aaee9457c16c8f3526012eaf` | Month `YYYYMM` |
+| PassSBTv3 | `0x52Fa686f14849B69309b8772EcE8051D508f7B98` | Season `YYYYMM` |
+| Treasure Vault (weekly) | `0x0Bf0F45774848A9d4B9cC672b247f575A5822638` | ISO week `YYYYWW` |
+| Season Bonus / RewardV3 (monthly) | `0x3a8396D2c8f5aA22b382b9DB03517CB453190334` | Month `YYYYMM` |
+
+Redeployed 2026-11-11 (new testnet wallet — the previous deployment's owner key was lost, so these replace it).
 
 Tokens (X Layer): **USDC** `0xB6CEceAB302E2E4948951eE7843FC24E92933061` (6 dec) ·
 **USDT0** `0x779Ded0c9e1022225f8E0630b35a9b54bE713736` (6 dec).
-Testnet: **tUSD** `0x15524d9ee28a7553119c75ed9b17775db925ce90` (test token).
+Testnet: **tUSD** `0x3FF2324b603C079dD17506858856a9e4ab4AF4e9` (test token).
 All `--amount` flags are in **human dollars** — the script scales to the token's
 decimals for you.
 

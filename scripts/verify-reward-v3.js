@@ -36,8 +36,8 @@
 const fs = require('fs')
 const path = require('path')
 
-const TESTNET_DEPLOYED = '0x50b16bd7edb7b533aaee9457c16c8f3526012eaf' // NullStateRewardV3 on X Layer testnet (1952)
-const TESTNET_PASS_SBT = '0x5e51fe3036ed867053e1625edca3e0c0e96aac94' // constructor _passSBT on testnet
+const TESTNET_DEPLOYED = '0x3a8396D2c8f5aA22b382b9DB03517CB453190334' // NullStateRewardV3 on X Layer testnet (1952)
+const TESTNET_PASS_SBT = '0x52Fa686f14849B69309b8772EcE8051D508f7B98' // constructor _passSBT on testnet
 const COMPILER = 'v0.8.20+commit.a1b79de6'
 const CONTRACT_NAME = 'NullStateRewardV3.sol:NullStateRewardV3'
 const STD_INPUT = path.join(__dirname, 'artifacts', 'NullStateRewardV3.standard-input.json')

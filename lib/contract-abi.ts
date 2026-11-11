@@ -145,6 +145,16 @@ if (
   )
 }
 
+// ---- X Layer TESTNET (chain 1952) — redeployed 2026-11-11 after the
+// reward-token identifier rename. TESTNET-ONLY: the app defaults to
+// mainnet (chain 196) via the env vars / fallbacks above; these constants
+// are for local testnet runs and admin scripts only. Do NOT use them as
+// mainnet fallbacks.
+export const TESTNET_TUSD_ADDRESS = '0x3FF2324b603C079dD17506858856a9e4ab4AF4e9' as `0x${string}`
+export const TESTNET_PASS_SBT_ADDRESS = '0x52Fa686f14849B69309b8772EcE8051D508f7B98' as `0x${string}`
+export const TESTNET_REWARD_CONTRACT_ADDRESS = '0x3a8396D2c8f5aA22b382b9DB03517CB453190334' as `0x${string}`
+export const TESTNET_TREASURE_VAULT_ADDRESS = '0x0Bf0F45774848A9d4B9cC672b247f575A5822638' as `0x${string}`
+
 // USDC (native USDC on X Layer) — used for NULL_STRIKE fee & burn
 // rewards. Standard 6-decimal ERC20.
 export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS ||

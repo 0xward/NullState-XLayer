@@ -17,7 +17,7 @@ pragma solidity ^0.8.20;
  *
  * WHAT ELSE CHANGED FROM V1:
  * - `VAULT_REWARD` is no longer `constant`. It's now `vaultReward`, a
- *   regular state variable (still defaulting to 1 USDm) with an
+ *   regular state variable (still defaulting to 1 primary token) with an
  *   owner-only setter (`setVaultReward`), so the reward amount can
  *   change without a redeploy.
  * - Token addresses are now owner-settable via the set*Token setters,
@@ -28,7 +28,7 @@ pragma solidity ^0.8.20;
  *
  * Features (unchanged from v1):
  * - Weekly randomized 4-digit codes (regenerate every Monday 00:00 UTC)
- * - Multi-token support: USDm, USDT, USDC, native token
+ * - Multi-token support: primary stablecoin, USDT, USDC, native token
  * - Claim limit: 1x per week per user
  * - Attempt limit: Max 3 wrong attempts before lock until next week
  * - Separate reward pool (independent from burn & seasonal bonus pools)
@@ -41,7 +41,7 @@ pragma solidity ^0.8.20;
  * 2. User finds Golden Key (Legendary) in Bunker 1, Floor 3 -> gets key
  * 3. User reaches Bunker 6, Floor 3 -> Vault UI appears
  * 4. User inputs 4-digit code from Paper
- * 5. Backend validates via submitVaultCode() -> user gets vaultReward (1 USDm default) if correct
+ * 5. Backend validates via submitVaultCode() -> user gets vaultReward (1 primary token default) if correct
  * 6. Max 3 attempts per week, then locked until next week
  */
 
@@ -59,7 +59,7 @@ contract TreasureVaultV2 is Ownable {
 
     // ============ Configurable Parameters ============
     /// @dev Reward amount per successful vault claim. Was a `constant`
-    /// (VAULT_REWARD) in v1; now owner-adjustable. Defaults to 1 USDm
+    /// (VAULT_REWARD) in v1; now owner-adjustable. Defaults to 1 primary token
     /// (18 decimals).
     uint256 public vaultReward = 1e18;
 
@@ -69,20 +69,20 @@ contract TreasureVaultV2 is Ownable {
     uint256 public constant MAX_ATTEMPTS_PER_WEEK = 3;
 
     // ============ Token Addresses ============
-    // Token addresses — see "WHY V2 EXISTS" above. Each has an
+    // Token addresses on X Layer. Each has an
     // owner-only setter below in case of a future migration/correction.
 
-    /// @dev USDm (Mento Dollar) - primary reward token
-    IERC20 public usdmToken = IERC20(0x765DE816845861e75A25fCA122bb6898B8B1282a);
+    /// @dev Primary stablecoin - primary reward token
+    IERC20 public primaryToken = IERC20(address(0));
 
     /// @dev USDT - alternative reward token
-    IERC20 public usdtToken = IERC20(0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e);
+    IERC20 public usdtToken = IERC20(0x779Ded0c9e1022225f8E0630b35a9b54bE713736);
 
     /// @dev USDC - alternative reward token
-    IERC20 public usdcToken = IERC20(0xcebA9300f2b948710d2653dD7B07f33A8B32118C);
+    IERC20 public usdcToken = IERC20(0xB6CEceAB302E2E4948951eE7843FC24E92933061);
 
-    /// @dev Native token address marker
-    address public celoToken = 0x471EcE3750Da237f93B8E339c536989b8978a438;
+    /// @dev Native token (OKB) address marker
+    address public nativeToken = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // ============ Vault Code Storage ============
     /// @notice Weekly vault codes (4-digit, regenerate every Monday 00:00 UTC)
@@ -106,13 +106,13 @@ contract TreasureVaultV2 is Ownable {
     mapping(address => mapping(uint256 => bool)) public userVaultLocked;
 
     // ============ Reward Pool Management ============
-    /// @notice Total USDm/USDT/USDC deposited into vault reward pool by owner
+    /// @notice Total reward tokens deposited into vault reward pool by owner
     uint256 public totalVaultPoolDeposited;
 
-    /// @notice Total USDm/USDT/USDC claimed from vault pool by users
+    /// @notice Total reward tokens claimed from vault pool by users
     uint256 public totalVaultPoolClaimed;
 
-    /// @notice Current reward token being used (USDm default)
+    /// @notice Current reward token being used (primary token default)
     address public currentRewardToken;
 
     // ============ Backend Authorization ============
@@ -162,8 +162,8 @@ contract TreasureVaultV2 is Ownable {
 
     // ============ Constructor ============
     constructor() Ownable(msg.sender) {
-        // @dev Initialize with USDm as default reward token
-        currentRewardToken = address(usdmToken);
+        // @dev Initialize with the primary token as default reward token
+        currentRewardToken = address(primaryToken);
     }
 
     // ============ Backend Authorization Management ============
@@ -182,13 +182,13 @@ contract TreasureVaultV2 is Ownable {
 
     /// @notice Switch reward token (for future flexibility)
     /// @dev Only owner can change reward token
-    /// @param _newToken Address of new reward token (must be USDm, USDT, USDC, or the native token)
+    /// @param _newToken Address of new reward token (must be primary, USDT, USDC, or the native token)
     function setRewardToken(address _newToken) external onlyOwner {
         require(
-            _newToken == address(usdmToken) ||
+            _newToken == address(primaryToken) ||
             _newToken == address(usdtToken) ||
             _newToken == address(usdcToken) ||
-            _newToken == celoToken,
+            _newToken == nativeToken,
             "Unsupported token"
         );
         currentRewardToken = _newToken;
@@ -204,11 +204,11 @@ contract TreasureVaultV2 is Ownable {
         emit VaultRewardUpdated(_newReward);
     }
 
-    /// @notice Update the USDm token address (owner-only migration/fix path)
-    function setUsdmToken(address _token) external onlyOwner {
+    /// @notice Update the primary token address (owner-only migration/fix path)
+    function setPrimaryToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
-        usdmToken = IERC20(_token);
-        emit TokenAddressUpdated("USDm", _token);
+        primaryToken = IERC20(_token);
+        emit TokenAddressUpdated("PRIMARY", _token);
     }
 
     /// @notice Update the USDT token address (owner-only migration/fix path)
@@ -226,37 +226,37 @@ contract TreasureVaultV2 is Ownable {
     }
 
     /// @notice Update the native-token marker address (owner-only fix path)
-    function setCeloToken(address _token) external onlyOwner {
+    function setNativeToken(address _token) external onlyOwner {
         require(_token != address(0), "Invalid address");
-        celoToken = _token;
-        emit TokenAddressUpdated("CELO", _token);
+        nativeToken = _token;
+        emit TokenAddressUpdated("NATIVE", _token);
     }
 
     // ============ Vault Pool Management ============
 
     /// @notice Owner deposits into vault reward pool
     /// @dev Accepts any supported token, tracks total deposited
-    /// @param _token Token address (USDm, USDT, USDC, or the native token)
+    /// @param _token Token address (primary, USDT, USDC, or the native token)
     /// @param _amount Amount to deposit (in wei)
     function depositVaultPool(address _token, uint256 _amount) external payable onlyOwner {
         require(
-            _token == address(usdmToken) ||
+            _token == address(primaryToken) ||
             _token == address(usdtToken) ||
             _token == address(usdcToken) ||
-            _token == celoToken,
+            _token == nativeToken,
             "Unsupported token"
         );
         require(_amount > 0, "Amount must be > 0");
 
         // @dev Transfer tokens from owner to contract
-        if (_token != celoToken) {
+        if (_token != nativeToken) {
             require(
                 IERC20(_token).transferFrom(msg.sender, address(this), _amount),
                 "Transfer failed"
             );
         } else {
             // @dev For the native token, payment via msg.value handled separately
-            require(msg.value >= _amount, "Insufficient CELO");
+            require(msg.value >= _amount, "Insufficient native token");
         }
 
         totalVaultPoolDeposited += _amount;
@@ -273,11 +273,11 @@ contract TreasureVaultV2 is Ownable {
         require(_amount > 0, "Amount must be > 0");
 
         // @dev Transfer tokens back to owner
-        if (_token != celoToken) {
+        if (_token != nativeToken) {
             require(IERC20(_token).transfer(msg.sender, _amount), "Transfer failed");
         } else {
             (bool success, ) = msg.sender.call{value: _amount}("");
-            require(success, "CELO transfer failed");
+            require(success, "Native token transfer failed");
         }
 
         totalVaultPoolDeposited -= _amount;
@@ -285,7 +285,7 @@ contract TreasureVaultV2 is Ownable {
     }
 
     /// @notice Get available vault reward funds
-    /// @return Available USDm/USDT/USDC for future claims
+    /// @return Available reward tokens for future claims
     function getAvailableVaultFunds() external view returns (uint256) {
         return totalVaultPoolDeposited - totalVaultPoolClaimed;
     }
@@ -330,7 +330,7 @@ contract TreasureVaultV2 is Ownable {
 
     // ============ Vault Code Submission & Claiming ============
 
-    /// @notice Submit vault code and claim vaultReward (1 USDm default) if correct
+    /// @notice Submit vault code and claim vaultReward (1 primary token default) if correct
     /// @dev Backend calls this after user inputs code in UI
     /// @dev Only 1 claim per user per week, max 3 attempts before lockout
     /// @param _user User address claiming reward
@@ -367,7 +367,7 @@ contract TreasureVaultV2 is Ownable {
                 "Insufficient vault pool"
             );
 
-            if (currentRewardToken != celoToken) {
+            if (currentRewardToken != nativeToken) {
                 require(
                     IERC20(currentRewardToken).transfer(_user, vaultReward),
                     "Transfer failed"
@@ -375,7 +375,7 @@ contract TreasureVaultV2 is Ownable {
             } else {
                 // @dev Send the native token
                 (bool success, ) = _user.call{value: vaultReward}("");
-                require(success, "CELO transfer failed");
+                require(success, "Native token transfer failed");
             }
 
             emit VaultCodeCorrect(_user, _weekId, vaultReward);

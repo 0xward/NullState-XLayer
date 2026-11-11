@@ -91,7 +91,8 @@ contract PassSBTv3 is ERC721, Ownable {
 
     // ============ Configurable Parameters ============
     // v3: was `PASS_PRICE_USD_CENTS` (constant) in v2. Informational only
-    // (0.30 USD by default) — actual payment is one of USDm/USDC/USDT,
+    // (0.30 USD by default) — actual payment is one of the supported
+    // stablecoins (USDC/USDT),
     // sent off-chain to TREASURY_WALLET and verified by the backend
     // before backendMintPass() is called (this contract never pulls any
     // token itself). Now owner-adjustable via setPassPriceUsdCents() so
@@ -299,7 +300,7 @@ contract PassSBTv3 is ERC721, Ownable {
     /**
      * @notice Mint a paid pass after off-chain stablecoin payment has
      * already been verified by the backend.
-     * @dev Unchanged from v2: payment (in USDm/USDC/USDT, whichever the
+     * @dev Unchanged from v2: payment (in USDC/USDT, whichever the
      * user holds most of, priced via passPriceUsdCents above) is sent as
      * a plain ERC20 transfer() to TREASURY_WALLET by the frontend,
      * verified on-chain by app/api/passsbt/mint/route.ts, and ONLY THEN
