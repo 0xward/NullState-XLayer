@@ -97,6 +97,9 @@ export const VAULT_FAILURE_MESSAGE: Record<VaultPayoutFailure, string> = {
 const VAULT_READ_ABI = [
   { name: 'vaultReward', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'currentRewardToken', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
+  // The week's code is public on chain (weeklyVaultCodes is a public getter).
+  // Reading it lets a caller tell a wrong code from a payout that never ran.
+  { name: 'getWeeklyVaultCode', type: 'function', stateMutability: 'view', inputs: [{ type: 'uint256' }], outputs: [{ type: 'string' }] },
 ] as const
 
 // Enough OKB to pay for one write with room to spare. The signer had 0.645
@@ -140,6 +143,86 @@ export async function isCodeOnChain(publicClient: PublicClient, weekId: number):
     })
     .then((v) => !!v)
     .catch(() => false)
+}
+
+export type VaultWeekState = {
+  codeSet: boolean
+  claimed: boolean
+  attemptsUsed: number
+  attemptsRemaining: number
+  locked: boolean
+  /** The week's code as stored on chain (public). '' when unset or unreadable. */
+  expectedCode: string
+}
+
+/**
+ * One wallet's week state, read entirely on chain — the Firebase-free
+ * replacement for the vaultCodes / vaultAttempts / vaultCompleted reads the
+ * submit route used to make.
+ *
+ * Best-effort by design: the contract re-checks everything at write time,
+ * so a stale or failed read here can only produce a worse error message,
+ * never a wrong payout. The one exception is `codeSet`: a failed read
+ * throws instead of reporting "not set", so an RPC outage is a 500, not a
+ * misleading 404. When the code is not set the remaining reads are skipped
+ * (the route 404s on `codeSet` before it needs them).
+ */
+export async function getVaultWeekState(
+  publicClient: PublicClient,
+  walletAddress: string,
+  weekId: number,
+): Promise<VaultWeekState> {
+  const user = walletAddress as `0x${string}`
+  const weekBig = BigInt(weekId)
+
+  const codeSet = await publicClient
+    .readContract({
+      address: TREASURE_VAULT_ADDRESS,
+      abi: TREASURE_VAULT_ABI,
+      functionName: 'isCodeSetForWeek',
+      args: [weekBig],
+    })
+    .then((v) => !!v)
+
+  if (!codeSet) {
+    return { codeSet: false, claimed: false, attemptsUsed: 0, attemptsRemaining: 3, locked: false, expectedCode: '' }
+  }
+
+  const [claimed, attempts, remaining, locked, expectedCode] = await Promise.all([
+    publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: TREASURE_VAULT_ABI, functionName: 'hasClaimedThisWeek', args: [user, weekBig] }).then((v) => !!v).catch(() => false),
+    publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: TREASURE_VAULT_ABI, functionName: 'getUserAttempts', args: [user, weekBig] }).then((v) => Number(v as bigint)).catch(() => 0),
+    publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: TREASURE_VAULT_ABI, functionName: 'getRemainingAttempts', args: [user, weekBig] }).then((v) => Number(v as bigint)).catch(() => 3),
+    publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: TREASURE_VAULT_ABI, functionName: 'isLockedThisWeek', args: [user, weekBig] }).then((v) => !!v).catch(() => false),
+    publicClient.readContract({ address: TREASURE_VAULT_ADDRESS, abi: VAULT_READ_ABI, functionName: 'getWeeklyVaultCode', args: [weekBig] }).then((v) => (typeof v === 'string' ? v : '')).catch(() => ''),
+  ])
+
+  return { codeSet: true, claimed, attemptsUsed: attempts, attemptsRemaining: remaining, locked, expectedCode }
+}
+
+/**
+ * Re-read hasClaimedThisWeek until it says true or the retries run out.
+ * A load-balanced RPC can answer one read behind the mined receipt, so a
+ * single false right after the payout tx is not a verdict. Returns false
+ * only after every retry still says unclaimed.
+ */
+export async function waitForClaimedThisWeek(
+  publicClient: PublicClient,
+  walletAddress: string,
+  weekId: number,
+  tries = 3,
+  delayMs = 1500,
+): Promise<boolean> {
+  const user = walletAddress as `0x${string}`
+  const weekBig = BigInt(weekId)
+  for (let i = 0; i < tries; i++) {
+    const claimed = await publicClient
+      .readContract({ address: TREASURE_VAULT_ADDRESS, abi: TREASURE_VAULT_ABI, functionName: 'hasClaimedThisWeek', args: [user, weekBig] })
+      .then((v) => !!v)
+      .catch(() => false)
+    if (claimed) return true
+    if (i < tries - 1) await new Promise((r) => setTimeout(r, delayMs))
+  }
+  return false
 }
 
 export type EnsureCodeResult = {
@@ -206,10 +289,17 @@ export type VaultPayoutResult =
 /**
  * Pay one winner. ONE on-chain write in the normal case.
  *
- * `expectedCode` is the canonical Firebase code, not the player's raw input:
- * correctness was already authenticated off-chain, so submitting the canonical
- * string guarantees the contract's own string comparison matches. A self-heal
- * re-run must pay even if the player fat-fingers a digit the second time.
+ * `expectedCode` is the code to submit — the player's submitted code from
+ * /api/vault/submit (there is no canonical copy anywhere else since Firebase
+ * went away), or the canonical code from a retry / sweep. The contract is
+ * the source of truth: submitVaultCode compares it against weeklyVaultCodes,
+ * counts the attempt, pays when correct and locks at 3 wrong attempts.
+ *
+ * A mined transaction does NOT imply a correct code — a wrong code also
+ * mines (VaultCodeIncorrect). Callers must re-read hasClaimedThisWeek (see
+ * waitForClaimedThisWeek) to decide paid vs wrong, and must not treat the
+ * `amount` / `token` here as proof of payment: they are the configured
+ * reward figure, read off the contract whether anything was paid or not.
  */
 export async function payVaultWinner(params: {
   weekId: number
@@ -306,6 +396,11 @@ export async function payVaultWinner(params: {
  * When it does happen, the nonce is read ONCE and incremented locally, because
  * asking a load-balanced RPC for the nonce a second time is precisely how the
  * second write got rejected before it was ever a transaction.
+ *
+ * `expectedCode` MUST be the canonical code as stored on chain — never a
+ * player's raw input. If the code is not yet stored, this stores
+ * `expectedCode` as the week's canonical code; passing a player's guess
+ * would crown a wrong guess as the week's code and then pay it.
  */
 export async function storeThenPay(params: {
   weekId: number
