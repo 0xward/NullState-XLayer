@@ -4697,7 +4697,7 @@ function onInvConfirmClick(){
 // Burn the currently-queued items. NullState Point is credited instantly
 // (off-chain, Firestore-backed balance — see /api/burn/record) once the
 // backend confirms the request; there is no weekly pool/claim step anymore
-// (Phase 5.5 #8 — burns used to feed an on-chain USDm pool via
+// (Phase 5.5 #8 — burns used to feed an on-chain stablecoin pool via
 // NullStateReward.sol's recordBurn(), that call has been removed). This
 // just clears the items from the local stash (optimistic) and reports the
 // burn to the app shell via a CustomEvent that DungeonGameWrapper.tsx

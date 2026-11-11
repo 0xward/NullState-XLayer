@@ -12,7 +12,7 @@
   var ITEM_COUNT = 1244;
 
   // Burn values are NullState Point (off-chain, faucet-only in-game asset —
-  // NOT real USDm anymore, see Phase 5.5 #8). Whole-number token amounts,
+  // NOT real stablecoin anymore, see Phase 5.5 #8). Whole-number token amounts,
   // rolled per-item within each rarity's range. stackCap limits how many of
   // one item a player can hold.
   var RARITIES = {
